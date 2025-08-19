@@ -51,7 +51,6 @@ java -jar target/file-comparator-1.0.0-jar-with-dependencies.jar src/main/resour
 
 ## Limitations
 
--   **PPTX Table Extraction:** The tool does not yet extract tables from PowerPoint files.
 -   **Image Comparison:** The tool detects the presence and number of images but does not perform a visual or hash-based comparison.
 -   **Excel Format Support:** The tool now supports both `.xls` (legacy) and `.xlsx` (modern) Excel formats.
 -   **Logging:** The application now produces meaningful logs during its execution.

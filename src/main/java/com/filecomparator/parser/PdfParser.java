@@ -69,6 +69,13 @@ public class PdfParser implements FileParser {
                 }
             }
             logger.info("PDF image extraction complete. Found {} images.", fileContent.getImages().size());
+
+            if (fileContent.getTables().isEmpty()) {
+                logger.info("No tables found in PDF file: {}", filePath);
+            }
+            if (fileContent.getImages().isEmpty()) {
+                logger.info("No images found in PDF file: {}", filePath);
+            }
         }
 
         return fileContent;

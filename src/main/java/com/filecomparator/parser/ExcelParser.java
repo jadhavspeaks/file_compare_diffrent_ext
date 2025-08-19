@@ -43,6 +43,10 @@ public class ExcelParser implements FileParser {
             }
         }
 
+        if (fileContent.getTables().isEmpty()) {
+            logger.info("No tables (sheets) found in Excel file: {}", filePath);
+        }
+
         fileContent.setText(textBuilder.toString());
         logger.debug("Excel file parsing complete.");
         return fileContent;

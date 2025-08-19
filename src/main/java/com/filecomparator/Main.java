@@ -4,7 +4,8 @@ import com.filecomparator.model.ComparisonReport;
 import com.filecomparator.model.FileContent;
 import com.filecomparator.parser.FileParser;
 import com.filecomparator.parser.ParserFactory;
-import com.filecomparator.report.ReportGenerator;
+import com.filecomparator.report.ExcelReportGenerator;
+import com.filecomparator.report.WordReportGenerator;
 import com.filecomparator.service.ComparatorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,8 +55,16 @@ public class Main {
 
             // Generate the report
             logger.info("Generating report...");
-            ReportGenerator reportGenerator = new ReportGenerator();
-            reportGenerator.generateReport(report, outputPath);
+            if (outputPath.toLowerCase().endsWith(".xlsx")) {
+                ExcelReportGenerator reportGenerator = new ExcelReportGenerator();
+                reportGenerator.generateReport(report, outputPath);
+            } else if (outputPath.toLowerCase().endsWith(".docx")) {
+                WordReportGenerator reportGenerator = new WordReportGenerator();
+                reportGenerator.generateReport(report, outputPath);
+            } else {
+                logger.error("Unsupported output file format. Please use .xlsx or .docx");
+                return;
+            }
 
             logger.info("Comparison finished. Report generated at: {}", outputPath);
 
