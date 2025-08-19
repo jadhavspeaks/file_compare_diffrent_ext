@@ -67,6 +67,13 @@
             <artifactId>logback-classic</artifactId>
             <version>1.4.5</version>
         </dependency>
+
+        <!-- PDF Table Extraction -->
+        <dependency>
+            <groupId>technology.tabula</groupId>
+            <artifactId>tabula</artifactId>
+            <version>1.0.5</version>
+        </dependency>
     </dependencies>
 
     <build>

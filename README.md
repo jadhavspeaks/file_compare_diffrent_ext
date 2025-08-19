@@ -51,8 +51,8 @@ java -jar target/file-comparator-1.0.0-jar-with-dependencies.jar src/main/resour
 
 ## Limitations
 
--   **PDF/PPTX Table Extraction:** Currently, the tool only extracts raw text from PDF and PowerPoint files. It does not intelligently identify and extract tables from these formats due to the complexity of the task.
--   **Image Comparison:** The tool detects the presence of images but does not perform a visual or hash-based comparison.
+-   **PPTX Table Extraction:** The tool does not yet extract tables from PowerPoint files.
+-   **Image Comparison:** The tool detects the presence and number of images but does not perform a visual or hash-based comparison.
 -   **Excel Format Support:** The tool now supports both `.xls` (legacy) and `.xlsx` (modern) Excel formats.
 -   **Logging:** The application now produces meaningful logs during its execution.
 -   **CSV Delimiter:** The CSV parser assumes a comma as the delimiter.
