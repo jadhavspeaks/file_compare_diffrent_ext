@@ -1,4 +1,6 @@
-package com.filecomparator;
+package com.filecomparator.parser;
+
+import com.filecomparator.model.FileContent;
 
 import java.io.IOException;
 

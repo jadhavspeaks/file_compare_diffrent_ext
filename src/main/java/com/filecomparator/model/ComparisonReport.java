@@ -1,4 +1,4 @@
-package com.filecomparator;
+package com.filecomparator.model;
 
 import java.util.ArrayList;
 import java.util.List;

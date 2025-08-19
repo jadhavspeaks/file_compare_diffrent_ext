@@ -1,5 +1,6 @@
-package com.filecomparator;
+package com.filecomparator.report;
 
+import com.filecomparator.model.ComparisonReport;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;

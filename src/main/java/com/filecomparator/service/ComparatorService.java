@@ -1,5 +1,7 @@
-package com.filecomparator;
+package com.filecomparator.service;
 
+import com.filecomparator.model.ComparisonReport;
+import com.filecomparator.model.FileContent;
 import com.github.difflib.DiffUtils;
 import com.github.difflib.patch.AbstractDelta;
 import com.github.difflib.patch.Patch;

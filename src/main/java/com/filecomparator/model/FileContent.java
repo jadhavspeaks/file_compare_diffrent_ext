@@ -1,4 +1,4 @@
-package com.filecomparator;
+package com.filecomparator.model;
 
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;

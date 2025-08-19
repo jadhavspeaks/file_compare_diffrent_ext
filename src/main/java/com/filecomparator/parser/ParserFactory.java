@@ -1,4 +1,4 @@
-package com.filecomparator;
+package com.filecomparator.parser;
 
 import java.util.Optional;
 

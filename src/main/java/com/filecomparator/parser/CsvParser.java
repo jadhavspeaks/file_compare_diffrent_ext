@@ -1,8 +1,11 @@
-package com.filecomparator;
+package com.filecomparator.parser;
 
+import com.filecomparator.model.FileContent;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -14,8 +17,11 @@ import java.util.stream.Collectors;
 
 public class CsvParser implements FileParser {
 
+    private static final Logger logger = LoggerFactory.getLogger(CsvParser.class);
+
     @Override
     public FileContent parse(String filePath) throws IOException {
+        logger.info("Parsing CSV file: {}", filePath);
         FileContent fileContent = new FileContent();
 
         // Extract raw text
@@ -30,6 +36,7 @@ public class CsvParser implements FileParser {
                     .map(CSVRecord::toList)
                     .collect(Collectors.toList());
             fileContent.addTable(table);
+            logger.debug("CSV parsing complete. Found {} rows.", table.size());
         }
 
         return fileContent;

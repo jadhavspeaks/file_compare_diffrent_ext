@@ -1,5 +1,11 @@
 package com.filecomparator;
 
+import com.filecomparator.model.ComparisonReport;
+import com.filecomparator.model.FileContent;
+import com.filecomparator.parser.FileParser;
+import com.filecomparator.parser.ParserFactory;
+import com.filecomparator.report.ReportGenerator;
+import com.filecomparator.service.ComparatorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
