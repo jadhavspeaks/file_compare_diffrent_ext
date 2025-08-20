@@ -2,6 +2,9 @@ package com.filecomparator.service;
 
 import com.filecomparator.model.ComparisonReport;
 import com.filecomparator.model.FileContent;
+import com.filecomparator.model.diff.ImageDifference;
+import com.filecomparator.model.diff.TableDifference;
+import com.filecomparator.model.diff.TextDifference;
 import com.github.difflib.DiffUtils;
 import com.github.difflib.patch.AbstractDelta;
 import com.github.difflib.patch.Patch;
@@ -14,6 +17,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -37,9 +41,15 @@ public class ComparatorService {
     }
 
     private void compareText(String text1, String text2, ComparisonReport report) {
-        if (text1 == null || text2 == null) {
-            if (text1 == null && text2 != null) report.addTextDifference("Text exists only in the second file.");
-            if (text1 != null && text2 == null) report.addTextDifference("Text exists only in the first file.");
+        if (text1 == null && text2 != null) {
+            report.addTextDifference(new TextDifference(TextDifference.DiffType.INSERT, "", text2));
+            return;
+        }
+        if (text1 != null && text2 == null) {
+            report.addTextDifference(new TextDifference(TextDifference.DiffType.DELETE, text1, ""));
+            return;
+        }
+        if (text1 == null && text2 == null) {
             return;
         }
 
@@ -59,10 +69,26 @@ public class ComparatorService {
             list2 = Arrays.asList(text2.split("\\R"));
         }
 
-        Patch<String> patch = DiffUtils.diff(list1, list2);
+        Patch<String> patch = DiffUtils.diff(list1, list2, false);
 
         for (AbstractDelta<String> delta : patch.getDeltas()) {
-            report.addTextDifference(String.format("[%s] %s", mode, delta.toString()));
+            switch (delta.getType()) {
+                case CHANGE:
+                    report.addTextDifference(new TextDifference(TextDifference.DiffType.CHANGE,
+                            String.join("\n", delta.getSource().getLines()),
+                            String.join("\n", delta.getTarget().getLines())));
+                    break;
+                case DELETE:
+                    report.addTextDifference(new TextDifference(TextDifference.DiffType.DELETE,
+                            String.join("\n", delta.getSource().getLines()),
+                            ""));
+                    break;
+                case INSERT:
+                    report.addTextDifference(new TextDifference(TextDifference.DiffType.INSERT,
+                            "",
+                            String.join("\n", delta.getTarget().getLines())));
+                    break;
+            }
         }
     }
 
@@ -93,67 +119,63 @@ public class ComparatorService {
 
             if (bestMatchIndex != -1 && bestMatchScore >= SIMILARITY_THRESHOLD) {
                 table2Matched[bestMatchIndex] = true;
-                compareSingleTable(table1, tables2.get(bestMatchIndex), i + 1, bestMatchIndex + 1, report);
+                compareSingleTable(table1, tables2.get(bestMatchIndex), i, bestMatchIndex, report);
             } else {
-                report.addTableDifference(String.format("Table %d in file 1 has no match in file 2.", i + 1));
+                report.addTableDifference(new TableDifference(i, -1, -1, -1, "Full Table", "No Match Found"));
             }
         }
 
         for (int j = 0; j < tables2.size(); j++) {
             if (!table2Matched[j]) {
-                report.addTableDifference(String.format("Table %d in file 2 has no match in file 1.", j + 1));
+                report.addTableDifference(new TableDifference(-1, j, -1, -1, "No Match Found", "Full Table"));
             }
         }
     }
 
     private void compareSingleTable(List<List<String>> table1, List<List<String>> table2, int table1Index, int table2Index, ComparisonReport report) {
-        if (table1.size() != table2.size()) {
-            report.addTableDifference(String.format("Matched Table (%d vs %d) has different number of rows: %d vs %d", table1Index, table2Index, table1.size(), table2.size()));
-        }
-
-        int maxRows = Math.min(table1.size(), table2.size());
+        int maxRows = Math.max(table1.size(), table2.size());
         for (int j = 0; j < maxRows; j++) {
-            List<String> row1 = table1.get(j);
-            List<String> row2 = table2.get(j);
-            if (row1.size() != row2.size()) {
-                report.addTableDifference(String.format("Matched Table (%d vs %d), Row %d has different number of columns: %d vs %d", table1Index, table2Index, j + 1, row1.size(), row2.size()));
-                continue;
-            }
-            for (int k = 0; k < row1.size(); k++) {
-                String cell1 = row1.get(k);
-                String cell2 = row2.get(k);
+            List<String> row1 = j < table1.size() ? table1.get(j) : new ArrayList<>();
+            List<String> row2 = j < table2.size() ? table2.get(j) : new ArrayList<>();
+            int maxCols = Math.max(row1.size(), row2.size());
+            for (int k = 0; k < maxCols; k++) {
+                String cell1 = k < row1.size() ? row1.get(k) : "";
+                String cell2 = k < row2.size() ? row2.get(k) : "";
                 if (!cell1.equals(cell2)) {
-                    report.addTableDifference(
-                            String.format("Mismatch at Matched Table (%d vs %d), Row %d, Col %d: '%s' vs '%s'", table1Index, table2Index, j + 1, k + 1, cell1, cell2)
-                    );
+                    report.addTableDifference(new TableDifference(table1Index, table2Index, j, k, cell1, cell2));
                 }
             }
         }
     }
 
     private void compareImages(List<BufferedImage> images1, List<BufferedImage> images2, ComparisonReport report) {
-        if (images1.size() != images2.size()) {
-            report.addTextDifference(String.format("Different number of images: %d vs %d", images1.size(), images2.size()));
-            return;
-        }
+        int maxImages = Math.max(images1.size(), images2.size());
+        for (int i = 0; i < maxImages; i++) {
+            BufferedImage img1 = i < images1.size() ? images1.get(i) : null;
+            BufferedImage img2 = i < images2.size() ? images2.get(i) : null;
 
-        for (int i = 0; i < images1.size(); i++) {
-            BufferedImage img1 = images1.get(i);
-            BufferedImage img2 = images2.get(i);
+            if (img1 == null) {
+                report.addImageDifference(new ImageDifference(null, img2, "Image only exists in source 2"));
+                continue;
+            }
+            if (img2 == null) {
+                report.addImageDifference(new ImageDifference(img1, null, "Image only exists in source 1"));
+                continue;
+            }
+
             if (img1.getWidth() != img2.getWidth() || img1.getHeight() != img2.getHeight()) {
-                report.addTextDifference(
-                        String.format("Image %d has different dimensions: (%d x %d) vs (%d x %d)",
-                                i + 1, img1.getWidth(), img1.getHeight(), img2.getWidth(), img2.getHeight())
-                );
+                String desc = String.format("Different dimensions: (%d x %d) vs (%d x %d)",
+                        img1.getWidth(), img1.getHeight(), img2.getWidth(), img2.getHeight());
+                report.addImageDifference(new ImageDifference(img1, img2, desc));
             } else {
                 try {
                     String hash1 = getImageHash(img1);
                     String hash2 = getImageHash(img2);
                     if (!hash1.equals(hash2)) {
-                        report.addTextDifference(String.format("Image %d has different content (hash mismatch)", i + 1));
+                        report.addImageDifference(new ImageDifference(img1, img2, "Image content is different (hash mismatch)"));
                     }
                 } catch (IOException | NoSuchAlgorithmException e) {
-                    report.addTextDifference(String.format("Could not compute hash for image %d", i + 1));
+                    // Could log this error if more detail is needed
                 }
             }
         }

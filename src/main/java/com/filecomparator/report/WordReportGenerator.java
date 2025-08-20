@@ -1,12 +1,15 @@
 package com.filecomparator.report;
 
 import com.filecomparator.model.ComparisonReport;
-import org.apache.poi.xwpf.usermodel.XWPFDocument;
-import org.apache.poi.xwpf.usermodel.XWPFParagraph;
-import org.apache.poi.xwpf.usermodel.XWPFRun;
-import org.apache.poi.xwpf.usermodel.XWPFTable;
-import org.apache.poi.xwpf.usermodel.XWPFTableRow;
+import com.filecomparator.model.diff.ImageDifference;
+import com.filecomparator.model.diff.TableDifference;
+import com.filecomparator.model.diff.TextDifference;
+import org.apache.poi.util.Units;
+import org.apache.poi.xwpf.usermodel.*;
 
+import javax.imageio.ImageIO;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
@@ -15,65 +18,136 @@ public class WordReportGenerator {
     public void generateReport(ComparisonReport report, String outputPath) throws IOException {
         try (XWPFDocument document = new XWPFDocument()) {
             // Summary
-            XWPFParagraph summaryHeader = document.createParagraph();
-            XWPFRun summaryRun = summaryHeader.createRun();
-            summaryRun.setBold(true);
-            summaryRun.setText("Comparison Summary");
-            document.createParagraph().createRun().setText(report.getSummary());
+            createSummary(document, report);
 
             // Text Differences
             if (!report.getTextDifferences().isEmpty()) {
-                document.createParagraph().createRun().addBreak();
-                XWPFParagraph textHeader = document.createParagraph();
-                XWPFRun textRun = textHeader.createRun();
-                textRun.setBold(true);
-                textRun.setText("Text Differences");
-                for (String diff : report.getTextDifferences()) {
-                    document.createParagraph().createRun().setText("- " + diff);
-                }
+                createTextDiffs(document, report);
             }
 
             // Table Differences
             if (!report.getTableDifferences().isEmpty()) {
-                document.createParagraph().createRun().addBreak();
-                XWPFParagraph tableHeader = document.createParagraph();
-                XWPFRun tableRun = tableHeader.createRun();
-                tableRun.setBold(true);
-                tableRun.setText("Table Differences");
+                createTableDiffs(document, report);
+            }
 
-                XWPFTable table = document.createTable();
-                XWPFTableRow headerRow = table.getRow(0);
-                headerRow.getCell(0).setText("Table");
-                headerRow.addNewTableCell().setText("Row");
-                headerRow.addNewTableCell().setText("Column");
-                headerRow.addNewTableCell().setText("File 1 Value");
-                headerRow.addNewTableCell().setText("File 2 Value");
-
-                for (String diff : report.getTableDifferences()) {
-                    XWPFTableRow row = table.createRow();
-                    if (diff.startsWith("Mismatch at")) {
-                        try {
-                            String[] parts = diff.split(":");
-                            String[] location = parts[0].replaceAll("[^0-9,]", "").split(",");
-                            String[] values = parts[1].split("' vs '");
-                            row.getCell(0).setText(location[0]);
-                            row.getCell(1).setText(location[1]);
-                            row.getCell(2).setText(location[2]);
-                            row.getCell(3).setText(values[0].substring(2));
-                            row.getCell(4).setText(values[1].substring(0, values[1].length() - 1));
-                        } catch (Exception e) {
-                            row.getCell(0).setText(diff); // Fallback
-                        }
-                    } else {
-                        row.getCell(0).setText(diff);
-                    }
-                }
+            // Image Differences
+            if (!report.getImageDifferences().isEmpty()) {
+                createImageDiffs(document, report);
             }
 
             // Write the output to a file
             try (FileOutputStream fileOut = new FileOutputStream(outputPath)) {
                 document.write(fileOut);
             }
+        }
+    }
+
+    private void createSummary(XWPFDocument document, ComparisonReport report) {
+        XWPFParagraph summaryHeader = document.createParagraph();
+        XWPFRun summaryRun = summaryHeader.createRun();
+        summaryRun.setBold(true);
+        summaryRun.setFontSize(14);
+        summaryRun.setText("Comparison Summary");
+        String summary = String.format("Found %d text differences, %d table cell differences, and %d image differences.",
+                report.getTextDifferences().size(),
+                report.getTableDifferences().size(),
+                report.getImageDifferences().size());
+        document.createParagraph().createRun().setText(summary);
+    }
+
+    private void createTextDiffs(XWPFDocument document, ComparisonReport report) {
+        document.createParagraph().createRun().addBreak();
+        XWPFParagraph textHeader = document.createParagraph();
+        XWPFRun textRun = textHeader.createRun();
+        textRun.setBold(true);
+        textRun.setFontSize(14);
+        textRun.setText("Text Differences");
+
+        XWPFTable table = document.createTable(report.getTextDifferences().size() + 1, 2);
+        table.setWidth("100%");
+        // Header
+        table.getRow(0).getCell(0).setText("Source 1");
+        table.getRow(0).getCell(1).setText("Source 2");
+
+        int rowNum = 1;
+        for (TextDifference diff : report.getTextDifferences()) {
+            XWPFTableRow row = table.getRow(rowNum++);
+            row.getCell(0).setText(diff.getText1());
+            row.getCell(1).setText(diff.getText2());
+            switch (diff.getType()) {
+                case INSERT:
+                    row.getCell(1).setColor("C7F0C7"); // Light Green
+                    break;
+                case DELETE:
+                    row.getCell(0).setColor("F0C7C7"); // Light Red
+                    break;
+                case CHANGE:
+                    row.getCell(0).setColor("F0F0C7"); // Light Yellow
+                    row.getCell(1).setColor("F0F0C7"); // Light Yellow
+                    break;
+            }
+        }
+    }
+
+    private void createTableDiffs(XWPFDocument document, ComparisonReport report) {
+        document.createParagraph().createRun().addBreak();
+        XWPFParagraph tableHeader = document.createParagraph();
+        XWPFRun tableRun = tableHeader.createRun();
+        tableRun.setBold(true);
+        tableRun.setFontSize(14);
+        tableRun.setText("Table Differences");
+
+        XWPFTable table = document.createTable(report.getTableDifferences().size() + 1, 6);
+        table.setWidth("100%");
+        // Header
+        XWPFTableRow headerRow = table.getRow(0);
+        headerRow.getCell(0).setText("Table 1 Index");
+        headerRow.getCell(1).setText("Table 2 Index");
+        headerRow.getCell(2).setText("Row");
+        headerRow.getCell(3).setText("Column");
+        headerRow.getCell(4).setText("Source 1 Value");
+        headerRow.getCell(5).setText("Source 2 Value");
+
+        int rowNum = 1;
+        for (TableDifference diff : report.getTableDifferences()) {
+             XWPFTableRow row = table.getRow(rowNum++);
+             row.getCell(0).setText(diff.getTableIndex1() >= 0 ? String.valueOf(diff.getTableIndex1() + 1) : "N/A");
+             row.getCell(1).setText(diff.getTableIndex2() >= 0 ? String.valueOf(diff.getTableIndex2() + 1) : "N/A");
+             row.getCell(2).setText(diff.getRowIndex() >= 0 ? String.valueOf(diff.getRowIndex() + 1) : "N/A");
+             row.getCell(3).setText(diff.getColIndex() >= 0 ? String.valueOf(diff.getColIndex() + 1) : "N/A");
+             row.getCell(4).setText(diff.getCell1());
+             row.getCell(5).setText(diff.getCell2());
+        }
+    }
+
+    private void createImageDiffs(XWPFDocument document, ComparisonReport report) {
+         document.createParagraph().createRun().addBreak();
+        XWPFParagraph imageHeader = document.createParagraph();
+        XWPFRun imageRun = imageHeader.createRun();
+        imageRun.setBold(true);
+        imageRun.setFontSize(14);
+        imageRun.setText("Image Differences");
+
+        for (ImageDifference diff : report.getImageDifferences()) {
+            document.createParagraph().createRun().setText("Difference: " + diff.getDescription());
+            XWPFTable table = document.createTable(1, 2);
+            table.setWidth("100%");
+            XWPFTableRow row = table.getRow(0);
+            try {
+                if (diff.getImage1() != null) {
+                    ByteArrayOutputStream baos1 = new ByteArrayOutputStream();
+                    ImageIO.write(diff.getImage1(), "png", baos1);
+                    row.getCell(0).addParagraph().createRun().addPicture(new ByteArrayInputStream(baos1.toByteArray()), XWPFDocument.PICTURE_TYPE_PNG, "image1.png", Units.toEMU(150), Units.toEMU(150));
+                }
+                if (diff.getImage2() != null) {
+                     ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
+                    ImageIO.write(diff.getImage2(), "png", baos2);
+                    row.getCell(1).addParagraph().createRun().addPicture(new ByteArrayInputStream(baos2.toByteArray()), XWPFDocument.PICTURE_TYPE_PNG, "image2.png", Units.toEMU(150), Units.toEMU(150));
+                }
+            } catch(Exception e) {
+                row.getCell(0).setText("Error embedding image: " + e.getMessage());
+            }
+            document.createParagraph().createRun().addBreak();
         }
     }
 }
