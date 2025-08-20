@@ -13,7 +13,11 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class CsvParser implements FileParser {
@@ -46,14 +50,28 @@ public class CsvParser implements FileParser {
     }
 
     private char detectDelimiter(String filePath) throws IOException {
+        List<Character> delimiters = Arrays.asList(',', ';', '\t', '|');
+        Map<Character, Integer> delimiterCounts = new HashMap<>();
+
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String header = reader.readLine();
-            if (header == null) {
-                return ','; // Default to comma for empty files
+            int lineCount = 0;
+            String line;
+            while ((line = reader.readLine()) != null && lineCount < 5) { // Check first 5 lines
+                for (char delim : delimiters) {
+                    int count = (int) line.chars().filter(c -> c == delim).count();
+                    if (count > 0) {
+                        delimiterCounts.put(delim, delimiterCounts.getOrDefault(delim, 0) + count);
+                    }
+                }
+                lineCount++;
             }
-            if (header.contains(";")) return ';';
-            if (header.contains("\t")) return '\t';
+        }
+
+        if (delimiterCounts.isEmpty()) {
             return ','; // Default
         }
+
+        // Return the delimiter with the highest count
+        return Collections.max(delimiterCounts.entrySet(), Map.Entry.comparingByValue()).getKey();
     }
 }
