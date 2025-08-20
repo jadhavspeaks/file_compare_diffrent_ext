@@ -19,6 +19,8 @@ public class ParserFactory {
             return Optional.of(new PdfParser());
         } else if (lowerCaseInput.endsWith(".pptx")) {
             return Optional.of(new PptxParser());
+        } else if (lowerCaseInput.endsWith(".jpeg") || lowerCaseInput.endsWith(".jpg") || lowerCaseInput.endsWith(".png")) {
+            return Optional.of(new ImageFileParser());
         } else {
             return Optional.empty();
         }

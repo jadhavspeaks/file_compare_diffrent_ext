@@ -15,6 +15,7 @@ The tool can compare content from any combination of the following sources, maki
 - **Adobe PDF**: Robustly handles `.pdf` documents.
 - **Microsoft PowerPoint**: Extracts content from `.pptx` presentations.
 - **Delimited Text Files**: Supports both comma-separated (`.csv`) and tab-separated (`.tsv`) files.
+- **Image Files**: Supports common image formats (`.jpeg`, `.jpg`, `.png`).
 - **Plain Text**: Parses standard `.txt` files.
 
 ### 2.2. Intelligent Content Extraction

@@ -17,7 +17,7 @@ public class MainFrame extends JFrame {
     private JComboBox<String> type2ComboBox;
     private JTextField path2TextField;
 
-    private final String[] supportedTypes = {"URL", "PDF", "XLSX", "XLS", "PPTX", "CSV", "TXT"};
+    private final String[] supportedTypes = {"URL", "PDF", "XLSX", "XLS", "PPTX", "CSV", "TXT", "JPEG", "PNG"};
 
     public MainFrame() {
         setTitle("File Comparator");
