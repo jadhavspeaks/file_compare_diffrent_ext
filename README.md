@@ -38,8 +38,10 @@ This is a Java-based command-line tool for comparing the contents of two files. 
 Run the application from the command line using the following format:
 
 ```bash
-java -jar target/file-comparator-1.0.0-jar-with-dependencies.jar <path_to_file1> <path_to_file2> <path_to_output_report.xlsx>
+java -jar target/file-comparator-1.0.0-jar-with-dependencies.jar <file1_path_or_url> <file2_path_or_url> <output_report_path>
 ```
+
+One or both of the input paths can be a URL (e.g., `https://...`). The tool will download the URL's content and compare it.
 
 ### Example
 

@@ -28,24 +28,22 @@ public class Main {
         String outputPath = args[2];
 
         try {
-            logger.info("Starting comparison for files: {} and {}", filePath1, filePath2);
+            logger.info("Starting comparison for inputs: {} and {}", filePath1, filePath2);
 
-            // Parse file 1
             Optional<FileParser> parser1Opt = ParserFactory.getParser(filePath1);
             if (parser1Opt.isEmpty()) {
-                logger.error("Unsupported file type for file: {}", filePath1);
+                logger.error("Unsupported input type for: {}", filePath1);
                 return;
             }
-            logger.info("Parsing file 1: {}", filePath1);
+            logger.info("Parsing input 1: {}", filePath1);
             FileContent content1 = parser1Opt.get().parse(filePath1);
 
-            // Parse file 2
             Optional<FileParser> parser2Opt = ParserFactory.getParser(filePath2);
             if (parser2Opt.isEmpty()) {
-                logger.error("Unsupported file type for file: {}", filePath2);
+                logger.error("Unsupported input type for: {}", filePath2);
                 return;
             }
-            logger.info("Parsing file 2: {}", filePath2);
+            logger.info("Parsing input 2: {}", filePath2);
             FileContent content2 = parser2Opt.get().parse(filePath2);
 
             // Compare the files
