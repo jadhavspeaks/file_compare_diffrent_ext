@@ -144,6 +144,9 @@ public class WordReportGenerator {
             document.createParagraph().createRun().setText("Difference: " + diff.getDescription());
             XWPFTable table = document.createTable(1, 2);
             table.setWidth("100%");
+            // Set column widths to be equal
+            table.getRow(0).getCell(0).getCTTc().addNewTcPr().addNewTcW().setW(java.math.BigInteger.valueOf(4500));
+            table.getRow(0).getCell(1).getCTTc().addNewTcPr().addNewTcW().setW(java.math.BigInteger.valueOf(4500));
             XWPFTableRow row = table.getRow(0);
             try {
                 if (diff.getImage1() != null) {

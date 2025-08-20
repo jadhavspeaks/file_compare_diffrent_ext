@@ -124,43 +124,51 @@ public class ExcelReportGenerator {
     }
 
     private void createImageDiffSheet(Workbook workbook, ComparisonReport report) {
-        Sheet imageDiffSheet = workbook.createSheet("Image Differences");
-        Drawing<?> drawing = imageDiffSheet.createDrawingPatriarch();
+        Sheet sheet = workbook.createSheet("Image Differences");
+        Drawing<?> drawing = sheet.createDrawingPatriarch();
         CreationHelper helper = workbook.getCreationHelper();
         int rowNum = 0;
 
         for (ImageDifference diff : report.getImageDifferences()) {
             try {
-                Row headerRow = imageDiffSheet.createRow(rowNum++);
-                headerRow.createCell(0).setCellValue("Image Difference: " + diff.getDescription());
+                // Description row
+                Row descRow = sheet.createRow(rowNum++);
+                descRow.createCell(0).setCellValue("Image Difference: " + diff.getDescription());
+                sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 9));
 
-                Row imageRow = imageDiffSheet.createRow(rowNum++);
-                imageRow.setHeightInPoints(200);
+                // Image row
+                Row imageRow = sheet.createRow(rowNum);
+                imageRow.setHeightInPoints(200); // Set a fixed height for the image row
 
+                // Image 1
                 if (diff.getImage1() != null) {
-                    ByteArrayOutputStream baos1 = new ByteArrayOutputStream();
-                    ImageIO.write(diff.getImage1(), "png", baos1);
-                    int pictureIdx1 = workbook.addPicture(baos1.toByteArray(), Workbook.PICTURE_TYPE_PNG);
-                    ClientAnchor anchor1 = helper.createClientAnchor();
-                    anchor1.setCol1(0);
-                    anchor1.setRow1(rowNum - 1);
-                    Picture pict1 = drawing.createPicture(anchor1, pictureIdx1);
-                    pict1.resize(1.0);
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    ImageIO.write(diff.getImage1(), "png", baos);
+                    int pictureIdx = workbook.addPicture(baos.toByteArray(), Workbook.PICTURE_TYPE_PNG);
+                    ClientAnchor anchor = helper.createClientAnchor();
+                    anchor.setCol1(0);
+                    anchor.setRow1(rowNum);
+                    anchor.setCol2(4);
+                    anchor.setRow2(rowNum + 1);
+                    drawing.createPicture(anchor, pictureIdx);
                 }
 
+                // Image 2
                 if (diff.getImage2() != null) {
-                    ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
-                    ImageIO.write(diff.getImage2(), "png", baos2);
-                    int pictureIdx2 = workbook.addPicture(baos2.toByteArray(), Workbook.PICTURE_TYPE_PNG);
-                    ClientAnchor anchor2 = helper.createClientAnchor();
-                    anchor2.setCol1(3); // Place second image next to the first
-                    anchor2.setRow1(rowNum - 1);
-                    Picture pict2 = drawing.createPicture(anchor2, pictureIdx2);
-                    pict2.resize(1.0);
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    ImageIO.write(diff.getImage2(), "png", baos);
+                    int pictureIdx = workbook.addPicture(baos.toByteArray(), Workbook.PICTURE_TYPE_PNG);
+                    ClientAnchor anchor = helper.createClientAnchor();
+                    anchor.setCol1(5);
+                    anchor.setRow1(rowNum);
+                    anchor.setCol2(9);
+                    anchor.setRow2(rowNum + 1);
+                    drawing.createPicture(anchor, pictureIdx);
                 }
-                rowNum++; // Add a blank row for spacing
+
+                rowNum += 12; // Advance row number significantly to avoid overlap, assuming 200 points is ~10 rows
             } catch (Exception e) {
-                Row errorRow = imageDiffSheet.createRow(rowNum++);
+                Row errorRow = sheet.createRow(rowNum++);
                 errorRow.createCell(0).setCellValue("Error embedding image: " + e.getMessage());
             }
         }
