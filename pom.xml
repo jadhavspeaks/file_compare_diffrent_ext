@@ -115,7 +115,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.filecomparator.Main</mainClass>
+                            <mainClass>com.filecomparator.ui.UIMain</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

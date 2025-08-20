@@ -56,21 +56,19 @@ The comparison logic is designed to be both powerful and insightful.
     This will generate a `file-comparator-1.0.0-jar-with-dependencies.jar` file in the `target` directory.
 
 ### 3.3. How to Run
-Run the application from the command line using the following format. The output report format is determined by the file extension you provide.
+The application now features a graphical user interface (GUI). Run the executable JAR file to launch it:
 
 ```bash
-java -jar target/file-comparator-1.0.0-jar-with-dependencies.jar <source1_path_or_url> <source2_path_or_url> <output_report_path>
+java -jar target/file-comparator-1.0.0-jar-with-dependencies.jar
 ```
 
-#### Example 1: Comparing a URL to a Local PDF with a Word Report
-```bash
-java -jar target/file-comparator-1.0.0-jar-with-dependencies.jar https://www.w3.org/WAI/ARIA/apg/patterns/table/examples/sortable-table/ src/main/resources/samples/sample.pdf report.docx
-```
-
-#### Example 2: Comparing Two Local Files with an Excel Report
-```bash
-java -jar target/file-comparator-1.0.0-jar-with-dependencies.jar src/main/resources/samples/sample1.txt src/main/resources/samples/sample2.csv report.xlsx
-```
+### 3.4. Using the Application
+1.  Launch the application using the command above.
+2.  For each of the two sources, select the type from the dropdown menu (e.g., "PDF", "URL").
+3.  Enter the file path or the full URL into the text field. Alternatively, click the "Browse..." button to select a local file.
+4.  Click the "Compare" button.
+5.  A "Save" dialog will appear. Choose a location and file name for your comparison report. The format (.xlsx or .docx) will be determined by the extension you provide.
+6.  A confirmation message will appear when the comparison is complete.
 
 ## 4. Limitations
 - **Dynamic Web Pages:** The URL parser works best with static HTML content and may not correctly parse content loaded dynamically with JavaScript.
