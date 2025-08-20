@@ -1,42 +1,52 @@
 # Advanced File and URL Comparator
 
-## Overview
+## 1. Overview
 
-This is a powerful, production-ready Java-based command-line tool for comparing the contents of two sources, which can be local files or web URLs. It intelligently extracts text, tables, and images from a wide variety of formats, performs a deep comparison, and generates a structured report in either Microsoft Excel (`.xlsx`) or Word (`.docx`).
+This is a powerful, production-ready, and feature-rich Java-based command-line tool for comparing the contents of two sources, which can be local files or web URLs. It is built with a modular and scalable architecture, using industry-standard libraries like Apache POI, PDFBox, and Jsoup.
 
-## Key Features
+The tool intelligently extracts a wide range of content—including text, tables, and images—performs a deep, multi-faceted comparison, and generates a clear, structured report in either Microsoft Excel (`.xlsx`) or Word (`.docx`).
 
-### Multi-Format Support
-The tool can compare content from any combination of the following sources:
-- **Web Pages** (via URL)
-- **Microsoft Excel** (`.xlsx`, `.xls`)
-- **Adobe PDF** (`.pdf`)
-- **Microsoft PowerPoint** (`.pptx`)
-- **CSV / TSV** (`.csv`, `.tsv`)
-- **Plain Text** (`.txt`)
+## 2. Comprehensive Feature Set
 
-### Intelligent Content Extraction
-- **From URLs:** Fetches and parses HTML content to extract clean text, tables, and images.
-- **From PDF/PowerPoint:** Extracts not only text but also tables and images embedded within the documents.
-- **From Excel/CSV:** Reads all tabular data. The CSV parser automatically detects common delimiters (comma, semicolon, tab).
-- **From Text:** Extracts plain text and heuristically detects and parses table-like structures.
+### 2.1. Universal Source Support
+The tool can compare content from any combination of the following sources, making it a highly versatile analysis tool:
+- **Web Pages**: Provide any URL (`http` or `https`) to fetch, parse, and analyze live web content.
+- **Microsoft Excel**: Full support for both modern (`.xlsx`) and legacy (`.xls`) formats.
+- **Adobe PDF**: Robustly handles `.pdf` documents.
+- **Microsoft PowerPoint**: Extracts content from `.pptx` presentations.
+- **Delimited Text Files**: Supports both comma-separated (`.csv`) and tab-separated (`.tsv`) files.
+- **Plain Text**: Parses standard `.txt` files.
 
-### Advanced Comparison Engine
-- **Text Comparison:** Automatically switches between line-by-line and paragraph-by-paragraph comparison for the most relevant results.
-- **Intelligent Table Matching:** Instead of just comparing tables in order, the engine uses header similarity (Jaro-Winkler algorithm) to intelligently match tables between sources before comparing them.
-- **Image Content Comparison:** Compares images not just by their dimensions but by the SHA-256 hash of their content, ensuring that visually identical images are correctly matched.
+### 2.2. Intelligent Content Extraction
+The tool goes beyond simple text extraction to build a deep understanding of the source content.
+- **HTML Parsing**: For URLs, the tool uses **Jsoup** to parse the HTML, extracting clean, visible text, all `<table>` elements, and all `<img>` elements with their data.
+- **PDF & PowerPoint Intelligence**: Extracts not just running text but also **tables** (using the Tabula library for PDFs) and **images** embedded within the documents.
+- **Heuristic Text Table Detection**: For plain `.txt` files, the tool employs a heuristic algorithm to automatically detect and extract table-like structures based on consistent column layouts.
+- **Automatic Delimiter Detection**: The CSV/TSV parser is not hardcoded. It automatically detects the most likely delimiter (comma, semicolon, or tab) for maximum flexibility.
 
-### Structured Reporting
-- **Dual Format:** Generates comparison reports in either Microsoft Excel (`.xlsx`) or Word (`.docx`).
-- **Clear and Detailed:** Differences are presented in a structured format. For example, table mismatches are shown in a table with columns for `Table`, `Row`, `Column`, `File 1 Value`, and `File 2 Value` for easy analysis.
+### 2.3. Advanced Comparison Engine
+The comparison logic is designed to be both powerful and insightful.
+- **Intelligent Table Matching**: The engine uses the **Jaro-Winkler string similarity algorithm** on table headers to intelligently match tables between the two sources. This avoids incorrect comparisons and allows the final report to show which tables were matched, which were unique, and which had no logical counterpart.
+- **Context-Aware Text Comparison**: The text diffing engine automatically analyzes the text and switches between a **line-by-line** comparison and a more logical **paragraph-by-paragraph** comparison, providing the most intuitive results for the given content.
+- **Content-Based Image Comparison**: The tool verifies if images are truly identical by comparing the **SHA-256 hash** of their content, rather than relying on superficial checks like dimensions or file names.
 
-## Prerequisites
+### 2.4. High-Quality, Structured Reporting
+- **Dual Format Output**: Generates user-friendly reports in either **Microsoft Excel (`.xlsx`)** or **Microsoft Word (`.docx`)**, determined by the output file extension.
+- **Structured Difference Tables**: Mismatches are not just listed; they are presented in clear, structured tables. For example, table differences are shown with columns for `Table`, `Row`, `Column`, `Source 1 Value`, and `Source 2 Value`.
 
+### 2.5. Professional & Robust Architecture
+- **Industry Standards**: Built with **Java 11** and **Maven** for reliable dependency management and builds.
+- **Modular Design**: The codebase is cleanly separated into a professional package structure (`model`, `parser`, `service`, `report`) for scalability and maintainability.
+- **Configurable Logging**: Uses **SLF4J** and a **Logback** configuration (`logback.xml`) for robust, configurable logging to both the console and a dedicated log file (`file-comparator.log`).
+- **Resilient Parsing**: All parsers are designed to be robust and will not fail if a source is missing certain elements (e.g., a PDF with no tables or a web page with no images).
+
+## 3. Usage
+
+### 3.1. Prerequisites
 - Java 11 or higher
 - Apache Maven
 
-## How to Build
-
+### 3.2. How to Build
 1.  Clone the repository.
 2.  Navigate to the project's root directory.
 3.  Run the following Maven command to build the project and create an executable JAR file:
@@ -45,28 +55,24 @@ The tool can compare content from any combination of the following sources:
     ```
     This will generate a `file-comparator-1.0.0-jar-with-dependencies.jar` file in the `target` directory.
 
-## Usage
-
-Run the application from the command line using the following format. The output format is determined by the file extension of the report path (`.xlsx` or `.docx`).
+### 3.3. How to Run
+Run the application from the command line using the following format. The output report format is determined by the file extension you provide.
 
 ```bash
 java -jar target/file-comparator-1.0.0-jar-with-dependencies.jar <source1_path_or_url> <source2_path_or_url> <output_report_path>
 ```
 
-### Example 1: Comparing a Local File and a URL
-
+#### Example 1: Comparing a URL to a Local PDF with a Word Report
 ```bash
-java -jar target/file-comparator-1.0.0-jar-with-dependencies.jar src/main/resources/samples/sample1.csv https://www.w3.org/WAI/ARIA/apg/patterns/table/examples/sortable-table/ report.docx
+java -jar target/file-comparator-1.0.0-jar-with-dependencies.jar https://www.w3.org/WAI/ARIA/apg/patterns/table/examples/sortable-table/ src/main/resources/samples/sample.pdf report.docx
 ```
 
-### Example 2: Comparing Two Local Files with an Excel Report
-
+#### Example 2: Comparing Two Local Files with an Excel Report
 ```bash
-java -jar target/file-comparator-1.0.0-jar-with-dependencies.jar src/main/resources/samples/sample1.txt src/main/resources/samples/sample2.txt report.xlsx
+java -jar target/file-comparator-1.0.0-jar-with-dependencies.jar src/main/resources/samples/sample1.txt src/main/resources/samples/sample2.csv report.xlsx
 ```
 
-## Limitations
-
-- **Complex Web Pages:** The URL parser may struggle with highly dynamic, JavaScript-heavy web pages. It works best with static HTML content.
-- **Advanced Table Matching:** The table matching is based on header similarity. It may not be perfect for tables without headers or with very generic headers.
-- **Deep Image Analysis:** Image comparison is based on a cryptographic hash. It will detect if images are different but will not provide a visual diff of the changes.
+## 4. Limitations
+- **Dynamic Web Pages:** The URL parser works best with static HTML content and may not correctly parse content loaded dynamically with JavaScript.
+- **Complex Table Matching:** The table matching is based on header similarity. It may be less effective for tables without headers or with very generic headers.
+- **Visual Image Diffing:** The tool can detect if images are different via hashing but does not provide a visual "diff" of the image changes.
