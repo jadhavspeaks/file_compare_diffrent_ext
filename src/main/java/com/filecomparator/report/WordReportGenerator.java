@@ -46,13 +46,25 @@ public class WordReportGenerator {
         XWPFParagraph summaryHeader = document.createParagraph();
         XWPFRun summaryRun = summaryHeader.createRun();
         summaryRun.setBold(true);
-        summaryRun.setFontSize(14);
+        summaryRun.setFontSize(16);
         summaryRun.setText("Comparison Summary");
-        String summary = String.format("Found %d text differences, %d table cell differences, and %d image differences.",
-                report.getTextDifferences().size(),
-                report.getTableDifferences().size(),
+
+        long inserts = report.getTextDifferences().stream().filter(d -> d.getType() == TextDifference.DiffType.INSERT).count();
+        long deletes = report.getTextDifferences().stream().filter(d -> d.getType() == TextDifference.DiffType.DELETE).count();
+        long changes = report.getTextDifferences().stream().filter(d -> d.getType() == TextDifference.DiffType.CHANGE).count();
+
+        String textSummary = String.format("Found %d text differences (%d additions, %d deletions, %d changes).",
+                report.getTextDifferences().size(), inserts, deletes, changes);
+
+        String tableSummary = String.format("Found %d table cell differences.",
+                report.getTableDifferences().size());
+
+        String imageSummary = String.format("Found %d image differences.",
                 report.getImageDifferences().size());
-        document.createParagraph().createRun().setText(summary);
+
+        document.createParagraph().createRun().setText(textSummary);
+        document.createParagraph().createRun().setText(tableSummary);
+        document.createParagraph().createRun().setText(imageSummary);
     }
 
     private void createTextDiffs(XWPFDocument document, ComparisonReport report) {
@@ -82,8 +94,8 @@ public class WordReportGenerator {
                     row.getCell(0).setColor("F0C7C7"); // Light Red
                     break;
                 case CHANGE:
-                    row.getCell(0).setColor("F0F0C7"); // Light Yellow
-                    row.getCell(1).setColor("F0F0C7"); // Light Yellow
+                    row.getCell(0).setColor("F0C7C7"); // Light Red
+                    row.getCell(1).setColor("C7F0C7"); // Light Green
                     break;
             }
         }

@@ -54,11 +54,23 @@ public class ExcelReportGenerator {
     private void createSummarySheet(Workbook workbook, ComparisonReport report) {
         Sheet summarySheet = workbook.createSheet("Summary");
         summarySheet.createRow(0).createCell(0).setCellValue("Comparison Summary");
-        String summary = String.format("Found %d text differences, %d table cell differences, and %d image differences.",
-                report.getTextDifferences().size(),
-                report.getTableDifferences().size(),
+
+        long inserts = report.getTextDifferences().stream().filter(d -> d.getType() == TextDifference.DiffType.INSERT).count();
+        long deletes = report.getTextDifferences().stream().filter(d -> d.getType() == TextDifference.DiffType.DELETE).count();
+        long changes = report.getTextDifferences().stream().filter(d -> d.getType() == TextDifference.DiffType.CHANGE).count();
+
+        String textSummary = String.format("Found %d text differences (%d additions, %d deletions, %d changes). See 'Text Differences' sheet.",
+                report.getTextDifferences().size(), inserts, deletes, changes);
+
+        String tableSummary = String.format("Found %d table cell differences. See 'Table Differences' sheet.",
+                report.getTableDifferences().size());
+
+        String imageSummary = String.format("Found %d image differences. See 'Image Differences' sheet.",
                 report.getImageDifferences().size());
-        summarySheet.createRow(1).createCell(0).setCellValue(summary);
+
+        summarySheet.createRow(1).createCell(0).setCellValue(textSummary);
+        summarySheet.createRow(2).createCell(0).setCellValue(tableSummary);
+        summarySheet.createRow(3).createCell(0).setCellValue(imageSummary);
     }
 
     private void createTextDiffSheet(Workbook workbook, ComparisonReport report, CellStyle green, CellStyle red, CellStyle yellow) {
@@ -81,8 +93,8 @@ public class ExcelReportGenerator {
                     cell1.setCellStyle(red);
                     break;
                 case CHANGE:
-                    cell1.setCellStyle(yellow);
-                    cell2.setCellStyle(yellow);
+                    cell1.setCellStyle(red);
+                    cell2.setCellStyle(green);
                     break;
             }
         }
@@ -113,7 +125,10 @@ public class ExcelReportGenerator {
 
     private void createImageDiffSheet(Workbook workbook, ComparisonReport report) {
         Sheet imageDiffSheet = workbook.createSheet("Image Differences");
+        Drawing<?> drawing = imageDiffSheet.createDrawingPatriarch();
+        CreationHelper helper = workbook.getCreationHelper();
         int rowNum = 0;
+
         for (ImageDifference diff : report.getImageDifferences()) {
             try {
                 Row headerRow = imageDiffSheet.createRow(rowNum++);
@@ -126,30 +141,25 @@ public class ExcelReportGenerator {
                     ByteArrayOutputStream baos1 = new ByteArrayOutputStream();
                     ImageIO.write(diff.getImage1(), "png", baos1);
                     int pictureIdx1 = workbook.addPicture(baos1.toByteArray(), Workbook.PICTURE_TYPE_PNG);
-                    CreationHelper helper = workbook.getCreationHelper();
-                    Drawing<?> drawing = imageDiffSheet.createDrawingPatriarch();
-                    ClientAnchor anchor = helper.createClientAnchor();
-                    anchor.setCol1(0);
-                    anchor.setRow1(rowNum -1);
-                    Picture pict = drawing.createPicture(anchor, pictureIdx1);
-                    pict.resize(1.0);
+                    ClientAnchor anchor1 = helper.createClientAnchor();
+                    anchor1.setCol1(0);
+                    anchor1.setRow1(rowNum - 1);
+                    Picture pict1 = drawing.createPicture(anchor1, pictureIdx1);
+                    pict1.resize(1.0);
                 }
 
                 if (diff.getImage2() != null) {
                     ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
                     ImageIO.write(diff.getImage2(), "png", baos2);
                     int pictureIdx2 = workbook.addPicture(baos2.toByteArray(), Workbook.PICTURE_TYPE_PNG);
-                     CreationHelper helper = workbook.getCreationHelper();
-                    Drawing<?> drawing = imageDiffSheet.createDrawingPatriarch();
-                    ClientAnchor anchor = helper.createClientAnchor();
-                    anchor.setCol1(5); // Place second image in a different column
-                    anchor.setRow1(rowNum - 1);
-                    Picture pict = drawing.createPicture(anchor, pictureIdx2);
-                    pict.resize(1.0);
+                    ClientAnchor anchor2 = helper.createClientAnchor();
+                    anchor2.setCol1(3); // Place second image next to the first
+                    anchor2.setRow1(rowNum - 1);
+                    Picture pict2 = drawing.createPicture(anchor2, pictureIdx2);
+                    pict2.resize(1.0);
                 }
                 rowNum++; // Add a blank row for spacing
             } catch (Exception e) {
-                // Log error or write to a cell
                 Row errorRow = imageDiffSheet.createRow(rowNum++);
                 errorRow.createCell(0).setCellValue("Error embedding image: " + e.getMessage());
             }
