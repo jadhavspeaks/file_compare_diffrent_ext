@@ -10,6 +10,8 @@ import com.filecomparator.service.ComparatorService;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class MainFrame extends JFrame {
 
@@ -134,11 +136,16 @@ public class MainFrame extends JFrame {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setDialogTitle("Select Folder to Save Reports");
             fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            int userSelection = fileChooser.showSaveDialog(MainFrame.this);
+            fileChooser.setAcceptAllFileFilterUsed(false); // Only show directories
 
-            if (userSelection == JFileChooser.APPROVE_OPTION) {
+            if (fileChooser.showOpenDialog(MainFrame.this) == JFileChooser.APPROVE_OPTION) {
                 File selectedFolder = fileChooser.getSelectedFile();
                 String basePath = selectedFolder.getAbsolutePath();
+
+                String type1 = (String) type1ComboBox.getSelectedItem();
+                String type2 = (String) type2ComboBox.getSelectedItem();
+                String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                String baseFileName = String.format("%s_vs_%s_Compare_%s", type1, type2, timestamp);
 
                 try {
                     // This is where the magic happens - calling the backend
@@ -149,8 +156,8 @@ public class MainFrame extends JFrame {
                     ComparisonReport report = comparator.compare(content1, content2);
 
                     // Generate both reports
-                    new WordReportGenerator().generateReport(report, basePath + File.separator + "ComparisonReport.docx");
-                    new ExcelReportGenerator().generateReport(report, basePath + File.separator + "ComparisonReport.xlsx");
+                    new WordReportGenerator().generateReport(report, basePath + File.separator + baseFileName + ".docx");
+                    new ExcelReportGenerator().generateReport(report, basePath + File.separator + baseFileName + ".xlsx");
 
                 } catch (Exception e) {
                     this.error = e;
