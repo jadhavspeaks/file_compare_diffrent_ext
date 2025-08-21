@@ -64,12 +64,14 @@ java -jar target/file-comparator-1.0.0-jar-with-dependencies.jar
 ```
 
 ### 3.4. Using the Application
-1.  Launch the application using the command above.
-2.  For each of the two sources, select the type from the dropdown menu (e.g., "PDF", "URL").
-3.  Enter the file path or the full URL into the text field. Alternatively, click the "Browse..." button to select a local file.
-4.  Click the "Compare" button.
-5.  A "Save" dialog will appear. Choose a location and file name for your comparison report. The format (.xlsx or .docx) will be determined by the extension you provide.
-6.  A confirmation message will appear when the comparison is complete.
+1.  Launch the application by running the executable JAR file.
+2.  For each of the two sources ("Source 1" and "Source 2"), select the content type from the dropdown menu (e.g., "PDF", "URL", "PNG").
+3.  Enter the full file path or URL into the corresponding text field. For local files, you can also use the "Browse..." button to open a file chooser.
+4.  Click the "Compare" button to begin the comparison.
+5.  A dialog box will appear asking you to select a **folder** where the output reports will be saved.
+6.  After you select a folder, the tool will perform the comparison and save **two report files** in that folder: one in Microsoft Word format (`.docx`) and one in Microsoft Excel format (`.xlsx`). The filenames will be automatically generated based on the source types and a timestamp (e.g., `PDF_vs_URL_Compare_20250821_123045.docx`).
+7.  A confirmation message will appear when the process is complete.
+8.  Click the "Close" button to exit the application.
 
 ## 4. Limitations
 - **Dynamic Web Pages:** The URL parser works best with static HTML content and may not correctly parse content loaded dynamically with JavaScript.
