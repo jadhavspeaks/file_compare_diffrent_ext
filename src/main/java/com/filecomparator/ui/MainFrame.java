@@ -6,15 +6,19 @@ import com.filecomparator.parser.ParserFactory;
 import com.filecomparator.report.ExcelReportGenerator;
 import com.filecomparator.report.WordReportGenerator;
 import com.filecomparator.service.ComparatorService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class MainFrame extends JFrame {
 
+    private static final Logger logger = LoggerFactory.getLogger(MainFrame.class);
     private JComboBox<String> type1ComboBox;
     private JTextField path1TextField;
     private JComboBox<String> type2ComboBox;
@@ -139,25 +143,51 @@ public class MainFrame extends JFrame {
             fileChooser.setAcceptAllFileFilterUsed(false); // Only show directories
 
             if (fileChooser.showOpenDialog(MainFrame.this) == JFileChooser.APPROVE_OPTION) {
-                File selectedFolder = fileChooser.getSelectedFile();
-                String basePath = selectedFolder.getAbsolutePath();
-
-                String type1 = (String) type1ComboBox.getSelectedItem();
-                String type2 = (String) type2ComboBox.getSelectedItem();
-                String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-                String baseFileName = String.format("%s_vs_%s_Compare_%s", type1, type2, timestamp);
+                File outputFolder = fileChooser.getSelectedFile();
 
                 try {
-                    // This is where the magic happens - calling the backend
-                    FileContent content1 = ParserFactory.getParser(source1).orElseThrow().parse(source1);
-                    FileContent content2 = ParserFactory.getParser(source2).orElseThrow().parse(source2);
+                    // Add detailed logging
+                    logger.info("Source 1: {}", source1);
+                    logger.info("Source 2: {}", source2);
+                    logger.info("Selected output folder: {}", outputFolder.getAbsolutePath());
 
+                    // Aggressive directory creation
+                    if (!outputFolder.exists()) {
+                        logger.info("Output folder does not exist. Attempting to create...");
+                        if (!outputFolder.mkdirs()) {
+                            throw new IOException("Could not create output directory: " + outputFolder.getAbsolutePath());
+                        }
+                    }
+                    if (!outputFolder.isDirectory()) {
+                        throw new IOException("The selected path is not a directory: " + outputFolder.getAbsolutePath());
+                    }
+
+                    String basePath = outputFolder.getAbsolutePath();
+                    String type1 = (String) type1ComboBox.getSelectedItem();
+                    String type2 = (String) type2ComboBox.getSelectedItem();
+                    String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                    String baseFileName = String.format("%s_vs_%s_Compare_%s", type1, type2, timestamp);
+
+                    // Parse
+                    logger.info("Parsing source 1...");
+                    FileContent content1 = ParserFactory.getParser(source1).orElseThrow(() -> new IOException("Unsupported type for source 1")).parse(source1);
+                    logger.info("Parsing source 2...");
+                    FileContent content2 = ParserFactory.getParser(source2).orElseThrow(() -> new IOException("Unsupported type for source 2")).parse(source2);
+
+                    // Compare
+                    logger.info("Comparing content...");
                     ComparatorService comparator = new ComparatorService();
                     ComparisonReport report = comparator.compare(content1, content2);
 
-                    // Generate both reports
-                    new WordReportGenerator().generateReport(report, basePath + File.separator + baseFileName + ".docx");
-                    new ExcelReportGenerator().generateReport(report, basePath + File.separator + baseFileName + ".xlsx");
+                    // Generate reports
+                    String docxPath = basePath + File.separator + baseFileName + ".docx";
+                    String xlsxPath = basePath + File.separator + baseFileName + ".xlsx";
+
+                    logger.info("Saving Word report to: {}", docxPath);
+                    new WordReportGenerator().generateReport(report, docxPath);
+
+                    logger.info("Saving Excel report to: {}", xlsxPath);
+                    new ExcelReportGenerator().generateReport(report, xlsxPath);
 
                 } catch (Exception e) {
                     this.error = e;
