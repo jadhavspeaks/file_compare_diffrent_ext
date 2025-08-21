@@ -9,6 +9,7 @@ import com.filecomparator.service.ComparatorService;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 
 public class MainFrame extends JFrame {
 
@@ -78,19 +79,27 @@ public class MainFrame extends JFrame {
         JButton browse2Button = new JButton("Browse...");
         add(browse2Button, gbc);
 
-        // --- Compare Button ---
+        // --- Button Panel ---
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        JButton compareButton = new JButton("Compare");
+        JButton closeButton = new JButton("Close");
+        buttonPanel.add(compareButton);
+        buttonPanel.add(closeButton);
+
         gbc.gridx = 0;
         gbc.gridy = 4;
         gbc.gridwidth = 4;
         gbc.anchor = GridBagConstraints.CENTER;
-        JButton compareButton = new JButton("Compare");
-        add(compareButton, gbc);
+        add(buttonPanel, gbc);
+
 
         // Add Listeners
         addListeners(browse1Button, path1TextField, type1ComboBox);
         addListeners(browse2Button, path2TextField, type2ComboBox);
 
         compareButton.addActionListener(e -> new CompareWorker().execute());
+
+        closeButton.addActionListener(e -> System.exit(0));
 
         setVisible(true);
     }
@@ -123,11 +132,13 @@ public class MainFrame extends JFrame {
             }
 
             JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setDialogTitle("Save Report");
+            fileChooser.setDialogTitle("Select Folder to Save Reports");
+            fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
             int userSelection = fileChooser.showSaveDialog(MainFrame.this);
 
             if (userSelection == JFileChooser.APPROVE_OPTION) {
-                String outputPath = fileChooser.getSelectedFile().getAbsolutePath();
+                File selectedFolder = fileChooser.getSelectedFile();
+                String basePath = selectedFolder.getAbsolutePath();
 
                 try {
                     // This is where the magic happens - calling the backend
@@ -137,11 +148,10 @@ public class MainFrame extends JFrame {
                     ComparatorService comparator = new ComparatorService();
                     ComparisonReport report = comparator.compare(content1, content2);
 
-                    if (outputPath.toLowerCase().endsWith(".docx")) {
-                        new WordReportGenerator().generateReport(report, outputPath);
-                    } else { // Default to xlsx
-                        new ExcelReportGenerator().generateReport(report, outputPath);
-                    }
+                    // Generate both reports
+                    new WordReportGenerator().generateReport(report, basePath + File.separator + "ComparisonReport.docx");
+                    new ExcelReportGenerator().generateReport(report, basePath + File.separator + "ComparisonReport.xlsx");
+
                 } catch (Exception e) {
                     this.error = e;
                 }
