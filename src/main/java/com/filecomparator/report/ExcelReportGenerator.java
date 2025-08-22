@@ -80,8 +80,8 @@ public class ExcelReportGenerator {
             Row row = textDiffSheet.createRow(rowNum++);
             Cell cell1 = row.createCell(0);
             Cell cell2 = row.createCell(1);
-            cell1.setCellValue(diff.getText1());
-            cell2.setCellValue(diff.getText2());
+            cell1.setCellValue(truncate(diff.getText1()));
+            cell2.setCellValue(truncate(diff.getText2()));
             switch (diff.getType()) {
                 case INSERT:
                     cell2.setCellStyle(green);
@@ -167,5 +167,13 @@ public class ExcelReportGenerator {
                 errorRow.createCell(0).setCellValue("Error embedding image: " + e.getMessage());
             }
         }
+    }
+
+    private String truncate(String text) {
+        int MAX_LENGTH = 32767;
+        if (text != null && text.length() > MAX_LENGTH) {
+            return text.substring(0, MAX_LENGTH - 15) + " [...truncated]";
+        }
+        return text;
     }
 }
