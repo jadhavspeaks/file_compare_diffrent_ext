@@ -1,6 +1,7 @@
 package com.filecomparator.parser;
 
 import com.filecomparator.model.FileContent;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.slf4j.Logger;
@@ -29,7 +30,7 @@ public class PdfParser implements FileParser {
         logger.info("Parsing PDF file: {}", filePath);
         FileContent fileContent = new FileContent();
 
-        try (PDDocument document = PDDocument.load(new File(filePath))) {
+        try (PDDocument document = Loader.loadPDF(new File(filePath))) {
             // Extract text
             PDFTextStripper pdfStripper = new PDFTextStripper();
             String text = pdfStripper.getText(document);
