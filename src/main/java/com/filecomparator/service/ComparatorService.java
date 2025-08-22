@@ -8,7 +8,6 @@ import com.filecomparator.model.diff.TextDifference;
 import com.github.difflib.DiffUtils;
 import com.github.difflib.patch.AbstractDelta;
 import com.github.difflib.patch.Patch;
-
 import org.apache.commons.text.similarity.JaroWinklerSimilarity;
 
 import javax.imageio.ImageIO;
@@ -31,7 +30,7 @@ public class ComparatorService {
         compareImages(content1.getImages(), content2.getImages(), report);
 
         // Generate a summary
-        if (report.getTextDifferences().isEmpty() && report.getTableDifferences().isEmpty()) {
+        if (report.getTextDifferences().isEmpty() && report.getTableDifferences().isEmpty() && report.getImageDifferences().isEmpty()) {
             report.setSummary("Files are identical.");
         } else {
             report.setSummary("Files have differences.");
@@ -53,18 +52,14 @@ public class ComparatorService {
             return;
         }
 
-        // Heuristic: If the text contains paragraph breaks, use paragraph comparison.
         boolean useParagraphMode = text1.contains("\n\n") || text1.contains("\r\n\r\n");
         List<String> list1;
         List<String> list2;
-        String mode;
 
         if (useParagraphMode) {
-            mode = "Paragraph";
             list1 = Arrays.asList(text1.split("(\\r\\n|\\n){2,}"));
             list2 = Arrays.asList(text2.split("(\\r\\n|\\n){2,}"));
         } else {
-            mode = "Line";
             list1 = Arrays.asList(text1.split("\\R"));
             list2 = Arrays.asList(text2.split("\\R"));
         }

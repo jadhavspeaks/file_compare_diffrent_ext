@@ -7,13 +7,11 @@ import com.filecomparator.model.diff.TextDifference;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.apache.poi.util.IOUtils;
 
 import javax.imageio.ImageIO;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
 public class ExcelReportGenerator {
 
@@ -22,13 +20,12 @@ public class ExcelReportGenerator {
             // Create styles
             CellStyle greenStyle = createStyle(workbook, IndexedColors.LIGHT_GREEN);
             CellStyle redStyle = createStyle(workbook, IndexedColors.ROSE);
-            CellStyle yellowStyle = createStyle(workbook, IndexedColors.LIGHT_YELLOW);
 
             // Summary Sheet
             createSummarySheet(workbook, report);
 
             // Text Differences Sheet
-            createTextDiffSheet(workbook, report, greenStyle, redStyle, yellowStyle);
+            createTextDiffSheet(workbook, report, greenStyle, redStyle);
 
             // Table Differences Sheet
             createTableDiffSheet(workbook, report);
@@ -73,7 +70,7 @@ public class ExcelReportGenerator {
         summarySheet.createRow(3).createCell(0).setCellValue(imageSummary);
     }
 
-    private void createTextDiffSheet(Workbook workbook, ComparisonReport report, CellStyle green, CellStyle red, CellStyle yellow) {
+    private void createTextDiffSheet(Workbook workbook, ComparisonReport report, CellStyle green, CellStyle red) {
         Sheet textDiffSheet = workbook.createSheet("Text Differences");
         Row headerRow = textDiffSheet.createRow(0);
         headerRow.createCell(0).setCellValue("Source 1");
@@ -138,9 +135,8 @@ public class ExcelReportGenerator {
 
                 // Image row
                 Row imageRow = sheet.createRow(rowNum);
-                imageRow.setHeightInPoints(200); // Set a fixed height for the image row
+                imageRow.setHeightInPoints(200);
 
-                // Image 1
                 if (diff.getImage1() != null) {
                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
                     ImageIO.write(diff.getImage1(), "png", baos);
@@ -153,7 +149,6 @@ public class ExcelReportGenerator {
                     drawing.createPicture(anchor, pictureIdx);
                 }
 
-                // Image 2
                 if (diff.getImage2() != null) {
                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
                     ImageIO.write(diff.getImage2(), "png", baos);
@@ -166,7 +161,7 @@ public class ExcelReportGenerator {
                     drawing.createPicture(anchor, pictureIdx);
                 }
 
-                rowNum += 12; // Advance row number significantly to avoid overlap, assuming 200 points is ~10 rows
+                rowNum += 12;
             } catch (Exception e) {
                 Row errorRow = sheet.createRow(rowNum++);
                 errorRow.createCell(0).setCellValue("Error embedding image: " + e.getMessage());

@@ -19,46 +19,42 @@ public class Main {
 
     public static void main(String[] args) {
         if (args.length != 3) {
-            logger.error("Usage: java -jar file-comparator.jar <file1_path> <file2_path> <output_report_path>");
+            logger.error("Usage: java -jar file-comparator-cli.jar <source1> <source2> <output_report_path>");
             return;
         }
 
-        String filePath1 = args[0];
-        String filePath2 = args[1];
+        String source1 = args[0];
+        String source2 = args[1];
         String outputPath = args[2];
 
         try {
-            logger.info("Starting comparison for inputs: {} and {}", filePath1, filePath2);
+            logger.info("Starting comparison for inputs: {} and {}", source1, source2);
 
-            Optional<FileParser> parser1Opt = ParserFactory.getParser(filePath1);
+            Optional<FileParser> parser1Opt = ParserFactory.getParser(source1);
             if (parser1Opt.isEmpty()) {
-                logger.error("Unsupported input type for: {}", filePath1);
+                logger.error("Unsupported input type for: {}", source1);
                 return;
             }
-            logger.info("Parsing input 1: {}", filePath1);
-            FileContent content1 = parser1Opt.get().parse(filePath1);
+            logger.info("Parsing input 1: {}", source1);
+            FileContent content1 = parser1Opt.get().parse(source1);
 
-            Optional<FileParser> parser2Opt = ParserFactory.getParser(filePath2);
+            Optional<FileParser> parser2Opt = ParserFactory.getParser(source2);
             if (parser2Opt.isEmpty()) {
-                logger.error("Unsupported input type for: {}", filePath2);
+                logger.error("Unsupported input type for: {}", source2);
                 return;
             }
-            logger.info("Parsing input 2: {}", filePath2);
-            FileContent content2 = parser2Opt.get().parse(filePath2);
+            logger.info("Parsing input 2: {}", source2);
+            FileContent content2 = parser2Opt.get().parse(source2);
 
-            // Compare the files
             logger.info("Comparing content...");
-            ComparatorService comparatorService = new ComparatorService();
-            ComparisonReport report = comparatorService.compare(content1, content2);
+            ComparatorService comparator = new ComparatorService();
+            ComparisonReport report = comparator.compare(content1, content2);
 
-            // Generate the report
             logger.info("Generating report...");
             if (outputPath.toLowerCase().endsWith(".xlsx")) {
-                ExcelReportGenerator reportGenerator = new ExcelReportGenerator();
-                reportGenerator.generateReport(report, outputPath);
+                new ExcelReportGenerator().generateReport(report, outputPath);
             } else if (outputPath.toLowerCase().endsWith(".docx")) {
-                WordReportGenerator reportGenerator = new WordReportGenerator();
-                reportGenerator.generateReport(report, outputPath);
+                new WordReportGenerator().generateReport(report, outputPath);
             } else {
                 logger.error("Unsupported output file format. Please use .xlsx or .docx");
                 return;

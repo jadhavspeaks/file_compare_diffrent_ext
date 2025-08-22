@@ -140,18 +140,16 @@ public class MainFrame extends JFrame {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setDialogTitle("Select Folder to Save Reports");
             fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            fileChooser.setAcceptAllFileFilterUsed(false); // Only show directories
+            fileChooser.setAcceptAllFileFilterUsed(false);
 
             if (fileChooser.showOpenDialog(MainFrame.this) == JFileChooser.APPROVE_OPTION) {
                 File outputFolder = fileChooser.getSelectedFile();
 
                 try {
-                    // Add detailed logging
                     logger.info("Source 1: {}", source1);
                     logger.info("Source 2: {}", source2);
                     logger.info("Selected output folder: {}", outputFolder.getAbsolutePath());
 
-                    // Aggressive directory creation
                     if (!outputFolder.exists()) {
                         logger.info("Output folder does not exist. Attempting to create...");
                         if (!outputFolder.mkdirs()) {
@@ -168,18 +166,15 @@ public class MainFrame extends JFrame {
                     String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
                     String baseFileName = String.format("%s_vs_%s_Compare_%s", type1, type2, timestamp);
 
-                    // Parse
                     logger.info("Parsing source 1...");
                     FileContent content1 = ParserFactory.getParser(source1).orElseThrow(() -> new IOException("Unsupported type for source 1")).parse(source1);
                     logger.info("Parsing source 2...");
                     FileContent content2 = ParserFactory.getParser(source2).orElseThrow(() -> new IOException("Unsupported type for source 2")).parse(source2);
 
-                    // Compare
                     logger.info("Comparing content...");
                     ComparatorService comparator = new ComparatorService();
                     ComparisonReport report = comparator.compare(content1, content2);
 
-                    // Generate reports
                     String docxPath = basePath + File.separator + baseFileName + ".docx";
                     String xlsxPath = basePath + File.separator + baseFileName + ".xlsx";
 
