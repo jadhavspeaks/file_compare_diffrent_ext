@@ -111,12 +111,23 @@ public class ExcelReportGenerator {
         int rowNum = 1;
         for (TableDifference diff : report.getTableDifferences()) {
             Row row = tableDiffSheet.createRow(rowNum++);
-            row.createCell(0).setCellValue(diff.getTableIndex1() >= 0 ? String.valueOf(diff.getTableIndex1() + 1) : "N/A");
-            row.createCell(1).setCellValue(diff.getTableIndex2() >= 0 ? String.valueOf(diff.getTableIndex2() + 1) : "N/A");
-            row.createCell(2).setCellValue(diff.getRowIndex() >= 0 ? String.valueOf(diff.getRowIndex() + 1) : "N/A");
-            row.createCell(3).setCellValue(diff.getColIndex() >= 0 ? String.valueOf(diff.getColIndex() + 1) : "N/A");
-            row.createCell(4).setCellValue(diff.getCell1());
-            row.createCell(5).setCellValue(diff.getCell2());
+            if (diff.getRowIndex() < 0) { // This is a summary row
+                Cell summaryCell = row.createCell(0);
+                summaryCell.setCellValue(String.format("Summary for Matched Tables (%d vs %d): %s", diff.getTableIndex1() + 1, diff.getTableIndex2() + 1, diff.getCell2()));
+                tableDiffSheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 5));
+                Font boldFont = workbook.createFont();
+                boldFont.setBold(true);
+                CellStyle boldStyle = workbook.createCellStyle();
+                boldStyle.setFont(boldFont);
+                summaryCell.setCellStyle(boldStyle);
+            } else {
+                row.createCell(0).setCellValue(diff.getTableIndex1() >= 0 ? String.valueOf(diff.getTableIndex1() + 1) : "N/A");
+                row.createCell(1).setCellValue(diff.getTableIndex2() >= 0 ? String.valueOf(diff.getTableIndex2() + 1) : "N/A");
+                row.createCell(2).setCellValue(diff.getRowIndex() >= 0 ? String.valueOf(diff.getRowIndex() + 1) : "N/A");
+                row.createCell(3).setCellValue(diff.getColIndex() >= 0 ? String.valueOf(diff.getColIndex() + 1) : "N/A");
+                row.createCell(4).setCellValue(diff.getCell1());
+                row.createCell(5).setCellValue(diff.getCell2());
+            }
         }
     }
 

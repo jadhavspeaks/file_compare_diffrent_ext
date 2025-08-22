@@ -87,6 +87,19 @@ public class ComparatorService {
         }
     }
 
+    private String getHeaderString(List<List<String>> table) {
+        if (table == null || table.isEmpty()) {
+            return "";
+        }
+        for (List<String> row : table) {
+            String joined = String.join(" ", row).trim();
+            if (!joined.isEmpty()) {
+                return joined;
+            }
+        }
+        return "";
+    }
+
     private void compareTables(List<List<List<String>>> tables1, List<List<List<String>>> tables2, ComparisonReport report) {
         final double SIMILARITY_THRESHOLD = 0.8;
         JaroWinklerSimilarity similarity = new JaroWinklerSimilarity();
@@ -94,7 +107,7 @@ public class ComparatorService {
 
         for (int i = 0; i < tables1.size(); i++) {
             List<List<String>> table1 = tables1.get(i);
-            String header1 = table1.isEmpty() ? "" : String.join(" ", table1.get(0));
+            String header1 = getHeaderString(table1);
 
             int bestMatchIndex = -1;
             double bestMatchScore = -1;
@@ -103,7 +116,7 @@ public class ComparatorService {
                 if (table2Matched[j]) continue;
 
                 List<List<String>> table2 = tables2.get(j);
-                String header2 = table2.isEmpty() ? "" : String.join(" ", table2.get(0));
+                String header2 = getHeaderString(table2);
                 double score = similarity.apply(header1, header2);
 
                 if (score > bestMatchScore) {
@@ -128,7 +141,15 @@ public class ComparatorService {
     }
 
     private void compareSingleTable(List<List<String>> table1, List<List<String>> table2, int table1Index, int table2Index, ComparisonReport report) {
-        int maxRows = Math.max(table1.size(), table2.size());
+        int rows1 = table1.size();
+        int rows2 = table2.size();
+        int cols1 = rows1 > 0 ? table1.get(0).size() : 0;
+        int cols2 = rows2 > 0 ? table2.get(0).size() : 0;
+
+        report.addTableDifference(new TableDifference(table1Index, table2Index, -1, -1, "Dimensions",
+                String.format("(%d rows, %d cols) vs (%d rows, %d cols)", rows1, cols1, rows2, cols2)));
+
+        int maxRows = Math.max(rows1, rows2);
         for (int j = 0; j < maxRows; j++) {
             List<String> row1 = j < table1.size() ? table1.get(j) : new ArrayList<>();
             List<String> row2 = j < table2.size() ? table2.get(j) : new ArrayList<>();

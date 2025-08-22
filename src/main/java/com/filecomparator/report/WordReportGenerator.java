@@ -120,15 +120,23 @@ public class WordReportGenerator {
         headerRow.getCell(4).setText("Source 1 Value");
         headerRow.getCell(5).setText("Source 2 Value");
 
-        int rowNum = 1;
         for (TableDifference diff : report.getTableDifferences()) {
-             XWPFTableRow row = table.getRow(rowNum++);
-             row.getCell(0).setText(diff.getTableIndex1() >= 0 ? String.valueOf(diff.getTableIndex1() + 1) : "N/A");
-             row.getCell(1).setText(diff.getTableIndex2() >= 0 ? String.valueOf(diff.getTableIndex2() + 1) : "N/A");
-             row.getCell(2).setText(diff.getRowIndex() >= 0 ? String.valueOf(diff.getRowIndex() + 1) : "N/A");
-             row.getCell(3).setText(diff.getColIndex() >= 0 ? String.valueOf(diff.getColIndex() + 1) : "N/A");
-             row.getCell(4).setText(diff.getCell1());
-             row.getCell(5).setText(diff.getCell2());
+            if (diff.getRowIndex() < 0) { // This is a summary row
+                // Add a formatted paragraph for the summary
+                XWPFParagraph summaryP = document.createParagraph();
+                summaryP.setSpacingBefore(200);
+                XWPFRun summaryRun = summaryP.createRun();
+                summaryRun.setBold(true);
+                summaryRun.setText(String.format("Summary for Matched Tables (%d vs %d): %s", diff.getTableIndex1() + 1, diff.getTableIndex2() + 1, diff.getCell2()));
+            } else {
+                 XWPFTableRow row = table.createRow();
+                 row.getCell(0).setText(diff.getTableIndex1() >= 0 ? String.valueOf(diff.getTableIndex1() + 1) : "N/A");
+                 row.getCell(1).setText(diff.getTableIndex2() >= 0 ? String.valueOf(diff.getTableIndex2() + 1) : "N/A");
+                 row.getCell(2).setText(diff.getRowIndex() >= 0 ? String.valueOf(diff.getRowIndex() + 1) : "N/A");
+                 row.getCell(3).setText(diff.getColIndex() >= 0 ? String.valueOf(diff.getColIndex() + 1) : "N/A");
+                 row.getCell(4).setText(diff.getCell1());
+                 row.getCell(5).setText(diff.getCell2());
+            }
         }
     }
 
