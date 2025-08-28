@@ -149,7 +149,11 @@ public class WordReportGenerator {
         imageRun.setText("Image Differences");
 
         for (ImageDifference diff : report.getImageDifferences()) {
-            document.createParagraph().createRun().setText("Difference: " + diff.getDescription());
+            String description = diff.getDescription();
+            if (diff.getSimilarityScore() > 0) {
+                description = String.format("Similarity: %.1f%%. %s", diff.getSimilarityScore() * 100, diff.getDescription());
+            }
+            document.createParagraph().createRun().setText("Difference: " + description);
             XWPFTable table = document.createTable(1, 2);
             table.setWidth("100%");
             table.getRow(0).getCell(0).getCTTc().addNewTcPr().addNewTcW().setW(java.math.BigInteger.valueOf(4500));

@@ -140,8 +140,12 @@ public class ExcelReportGenerator {
         for (ImageDifference diff : report.getImageDifferences()) {
             try {
                 // Description row
+                String description = diff.getDescription();
+                if (diff.getSimilarityScore() > 0) {
+                    description = String.format("Similarity: %.1f%%. %s", diff.getSimilarityScore() * 100, diff.getDescription());
+                }
                 Row descRow = sheet.createRow(rowNum++);
-                descRow.createCell(0).setCellValue("Image Difference: " + diff.getDescription());
+                descRow.createCell(0).setCellValue("Image Difference: " + description);
                 sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 9));
 
                 // Image row

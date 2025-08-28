@@ -10,17 +10,15 @@ import com.github.difflib.patch.AbstractDelta;
 import com.github.difflib.patch.Patch;
 import org.apache.commons.text.similarity.JaroWinklerSimilarity;
 
-import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class ComparatorService {
+
+    private static final double IMAGE_SIMILARITY_THRESHOLD = 0.2; // Max normalized Hamming distance
 
     public ComparisonReport compare(FileContent content1, FileContent content2) {
         ComparisonReport report = new ComparisonReport();
@@ -29,9 +27,8 @@ public class ComparatorService {
         compareTables(content1.getTables(), content2.getTables(), report);
         compareImages(content1.getImages(), content2.getImages(), report);
 
-        // Generate a summary
         if (report.getTextDifferences().isEmpty() && report.getTableDifferences().isEmpty() && report.getImageDifferences().isEmpty()) {
-            report.setSummary("Files are identical.");
+            report.setSummary("Files are identical or highly similar.");
         } else {
             report.setSummary("Files have differences.");
         }
@@ -146,8 +143,10 @@ public class ComparatorService {
         int cols1 = rows1 > 0 ? table1.get(0).size() : 0;
         int cols2 = rows2 > 0 ? table2.get(0).size() : 0;
 
-        report.addTableDifference(new TableDifference(table1Index, table2Index, -1, -1, "Dimensions",
-                String.format("(%d rows, %d cols) vs (%d rows, %d cols)", rows1, cols1, rows2, cols2)));
+        if (rows1 != rows2 || cols1 != cols2) {
+            report.addTableDifference(new TableDifference(table1Index, table2Index, -1, -1, "Dimensions",
+                    String.format("(%d rows, %d cols) vs (%d rows, %d cols)", rows1, cols1, rows2, cols2)));
+        }
 
         int maxRows = Math.max(rows1, rows2);
         for (int j = 0; j < maxRows; j++) {
@@ -165,52 +164,77 @@ public class ComparatorService {
     }
 
     private void compareImages(List<BufferedImage> images1, List<BufferedImage> images2, ComparisonReport report) {
-        int maxImages = Math.max(images1.size(), images2.size());
-        for (int i = 0; i < maxImages; i++) {
-            BufferedImage img1 = i < images1.size() ? images1.get(i) : null;
-            BufferedImage img2 = i < images2.size() ? images2.get(i) : null;
+        List<String> hashes1 = new ArrayList<>();
+        for (BufferedImage img : images1) {
+            hashes1.add(getDHash(img));
+        }
+        List<String> hashes2 = new ArrayList<>();
+        for (BufferedImage img : images2) {
+            hashes2.add(getDHash(img));
+        }
 
-            if (img1 == null) {
-                report.addImageDifference(new ImageDifference(null, img2, "Image only exists in source 2"));
-                continue;
-            }
-            if (img2 == null) {
-                report.addImageDifference(new ImageDifference(img1, null, "Image only exists in source 1"));
-                continue;
-            }
+        boolean[] image2Matched = new boolean[images2.size()];
 
-            if (img1.getWidth() != img2.getWidth() || img1.getHeight() != img2.getHeight()) {
-                String desc = String.format("Different dimensions: (%d x %d) vs (%d x %d)",
-                        img1.getWidth(), img1.getHeight(), img2.getWidth(), img2.getHeight());
-                report.addImageDifference(new ImageDifference(img1, img2, desc));
-            } else {
-                try {
-                    String hash1 = getImageHash(img1);
-                    String hash2 = getImageHash(img2);
-                    if (!hash1.equals(hash2)) {
-                        report.addImageDifference(new ImageDifference(img1, img2, "Image content is different (hash mismatch)"));
-                    }
-                } catch (IOException | NoSuchAlgorithmException e) {
-                    // Could log this error if more detail is needed
+        for (int i = 0; i < hashes1.size(); i++) {
+            String hash1 = hashes1.get(i);
+            int bestMatchIndex = -1;
+            double minDistance = Double.MAX_VALUE;
+
+            for (int j = 0; j < hashes2.size(); j++) {
+                if (image2Matched[j]) continue;
+
+                String hash2 = hashes2.get(j);
+                int distance = getHammingDistance(hash1, hash2);
+                double normalizedDistance = (double) distance / 64.0;
+
+                if (normalizedDistance < minDistance) {
+                    minDistance = normalizedDistance;
+                    bestMatchIndex = j;
                 }
+            }
+
+            if (bestMatchIndex != -1 && minDistance <= IMAGE_SIMILARITY_THRESHOLD) {
+                image2Matched[bestMatchIndex] = true;
+                if (minDistance > 0) {
+                    String desc = String.format("Images are similar with a distance of %.3f (%.1f%% similarity).", minDistance, (1 - minDistance) * 100);
+                    report.addImageDifference(new ImageDifference(images1.get(i), images2.get(bestMatchIndex), desc, 1 - minDistance));
+                }
+            } else {
+                report.addImageDifference(new ImageDifference(images1.get(i), null, "No similar image found in source 2.", 0));
+            }
+        }
+
+        for (int j = 0; j < images2.size(); j++) {
+            if (!image2Matched[j]) {
+                report.addImageDifference(new ImageDifference(null, images2.get(j), "No similar image found in source 1.", 0));
             }
         }
     }
 
-    private String getImageHash(BufferedImage image) throws IOException, NoSuchAlgorithmException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(image, "png", baos);
-        byte[] imageData = baos.toByteArray();
+    private String getDHash(BufferedImage image) {
+        BufferedImage resizedImage = new BufferedImage(9, 8, BufferedImage.TYPE_BYTE_GRAY);
+        Graphics2D g = resizedImage.createGraphics();
+        g.drawImage(image, 0, 0, 9, 8, null);
+        g.dispose();
 
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] hashBytes = digest.digest(imageData);
-
-        StringBuilder hexString = new StringBuilder();
-        for (byte b : hashBytes) {
-            String hex = Integer.toHexString(0xff & b);
-            if (hex.length() == 1) hexString.append('0');
-            hexString.append(hex);
+        StringBuilder hash = new StringBuilder();
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                int pixel1 = resizedImage.getRGB(x, y);
+                int pixel2 = resizedImage.getRGB(x + 1, y);
+                hash.append(pixel1 < pixel2 ? "1" : "0");
+            }
         }
-        return hexString.toString();
+        return hash.toString();
+    }
+
+    private int getHammingDistance(String hash1, String hash2) {
+        int distance = 0;
+        for (int i = 0; i < hash1.length(); i++) {
+            if (hash1.charAt(i) != hash2.charAt(i)) {
+                distance++;
+            }
+        }
+        return distance;
     }
 }
