@@ -16,12 +16,18 @@ public class ExcelParser implements FileParser {
     private static final Logger logger = LoggerFactory.getLogger(ExcelParser.class);
 
     @Override
-    public FileContent parse(String filePath) throws IOException {
-        logger.info("Parsing Excel file: {}", filePath);
+    public boolean canParse(String input) {
+        String lowerCaseInput = input.toLowerCase();
+        return lowerCaseInput.endsWith(".xlsx") || lowerCaseInput.endsWith(".xls");
+    }
+
+    @Override
+    public FileContent parse(String input) throws IOException {
+        logger.info("Parsing Excel file: {}", input);
         FileContent fileContent = new FileContent();
         StringBuilder textBuilder = new StringBuilder();
 
-        try (FileInputStream fis = new FileInputStream(new File(filePath));
+        try (FileInputStream fis = new FileInputStream(new File(input));
              Workbook workbook = WorkbookFactory.create(fis)) {
 
             logger.debug("Found {} sheets in the Excel file.", workbook.getNumberOfSheets());
@@ -44,7 +50,7 @@ public class ExcelParser implements FileParser {
         }
 
         if (fileContent.getTables().isEmpty()) {
-            logger.info("No tables (sheets) found in Excel file: {}", filePath);
+            logger.info("No tables (sheets) found in Excel file: {}", input);
         }
 
         fileContent.setText(textBuilder.toString());

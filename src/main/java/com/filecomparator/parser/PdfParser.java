@@ -27,11 +27,16 @@ public class PdfParser implements FileParser {
     private static final Logger logger = LoggerFactory.getLogger(PdfParser.class);
 
     @Override
-    public FileContent parse(String filePath) throws IOException {
-        logger.info("Parsing PDF file: {}", filePath);
+    public boolean canParse(String input) {
+        return input.toLowerCase().endsWith(".pdf");
+    }
+
+    @Override
+    public FileContent parse(String input) throws IOException {
+        logger.info("Parsing PDF file: {}", input);
         FileContent fileContent = new FileContent();
 
-        try (PDDocument document = Loader.loadPDF(new File(filePath))) {
+        try (PDDocument document = Loader.loadPDF(new File(input))) {
             // Extract text
             PDFTextStripper pdfStripper = new PDFTextStripper();
             String text = pdfStripper.getText(document);
@@ -39,7 +44,7 @@ public class PdfParser implements FileParser {
             logger.debug("PDF text extraction complete. Extracted {} characters.", text.length());
 
             // Extract tables with Tabula
-            logger.info("Extracting tables from PDF file: {}", filePath);
+            logger.info("Extracting tables from PDF file: {}", input);
             SpreadsheetExtractionAlgorithm sea = new SpreadsheetExtractionAlgorithm();
             ObjectExtractor oe = new ObjectExtractor(document);
             PageIterator pi = oe.extract();
@@ -62,7 +67,7 @@ public class PdfParser implements FileParser {
             logger.info("PDF table extraction complete. Found {} tables.", fileContent.getTables().size());
 
             // Extract images with PDFBox
-            logger.info("Extracting images from PDF file: {}", filePath);
+            logger.info("Extracting images from PDF file: {}", input);
             for (PDPage page : document.getPages()) {
                 for (COSName name : page.getResources().getXObjectNames()) {
                     if (page.getResources().isImageXObject(name)) {
@@ -73,10 +78,10 @@ public class PdfParser implements FileParser {
             logger.info("PDF image extraction complete. Found {} images.", fileContent.getImages().size());
 
             if (fileContent.getTables().isEmpty()) {
-                logger.info("No tables found in PDF file: {}", filePath);
+                logger.info("No tables found in PDF file: {}", input);
             }
             if (fileContent.getImages().isEmpty()) {
-                logger.info("No images found in PDF file: {}", filePath);
+                logger.info("No images found in PDF file: {}", input);
             }
         }
 

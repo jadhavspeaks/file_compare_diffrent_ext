@@ -3,10 +3,11 @@ package com.filecomparator;
 import com.filecomparator.model.ComparisonReport;
 import com.filecomparator.model.FileContent;
 import com.filecomparator.parser.FileParser;
-import com.filecomparator.parser.ParserFactory;
+import com.filecomparator.service.ParserFactory;
 import com.filecomparator.report.ExcelReportGenerator;
 import com.filecomparator.report.WordReportGenerator;
 import com.filecomparator.service.ComparatorService;
+import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,14 +19,34 @@ public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
     public static void main(String[] args) {
-        if (args.length != 3) {
-            logger.error("Usage: java -jar file-comparator-cli.jar <source1> <source2> <output_report_path>");
+        Options options = new Options();
+        options.addOption("f1", "file1", true, "First file path or URL");
+        options.addOption("f2", "file2", true, "Second file path or URL");
+        options.addOption("r", "report", true, "Output report file path (.docx or .xlsx)");
+
+        CommandLineParser parser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+        CommandLine cmd;
+
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+            formatter.printHelp("file-comparator", options);
+            System.exit(1);
             return;
         }
 
-        String source1 = args[0];
-        String source2 = args[1];
-        String outputPath = args[2];
+        String source1 = cmd.getOptionValue("file1");
+        String source2 = cmd.getOptionValue("file2");
+        String outputPath = cmd.getOptionValue("report");
+
+        if (source1 == null || source2 == null || outputPath == null) {
+            formatter.printHelp("file-comparator", options);
+            System.exit(1);
+            return;
+        }
+
 
         try {
             logger.info("Starting comparison for inputs: {} and {}", source1, source2);

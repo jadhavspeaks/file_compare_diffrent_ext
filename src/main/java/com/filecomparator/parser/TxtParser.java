@@ -18,10 +18,15 @@ public class TxtParser implements FileParser {
     private static final int MIN_TABLE_ROWS = 3; // Minimum number of consecutive rows to be considered a table
 
     @Override
-    public FileContent parse(String filePath) throws IOException {
-        logger.info("Parsing text file: {}", filePath);
+    public boolean canParse(String input) {
+        return input.toLowerCase().endsWith(".txt");
+    }
+
+    @Override
+    public FileContent parse(String input) throws IOException {
+        logger.info("Parsing text file: {}", input);
         FileContent fileContent = new FileContent();
-        List<String> lines = Files.readAllLines(Paths.get(filePath));
+        List<String> lines = Files.readAllLines(Paths.get(input));
         StringBuilder textBuilder = new StringBuilder();
         List<String> potentialTableLines = new ArrayList<>();
         String currentDelimiter = null;

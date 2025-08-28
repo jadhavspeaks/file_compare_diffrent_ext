@@ -31,6 +31,12 @@ public class UrlParser implements FileParser {
     }
 
     @Override
+    public boolean canParse(String input) {
+        String lowerCaseInput = input.toLowerCase();
+        return lowerCaseInput.startsWith("http://") || lowerCaseInput.startsWith("https://");
+    }
+
+    @Override
     public FileContent parse(String urlString) throws IOException {
         logger.info("Parsing URL: {}", urlString);
         FileContent fileContent = new FileContent();

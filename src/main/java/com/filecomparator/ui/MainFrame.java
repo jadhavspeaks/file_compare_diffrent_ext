@@ -2,7 +2,7 @@ package com.filecomparator.ui;
 
 import com.filecomparator.model.ComparisonReport;
 import com.filecomparator.model.FileContent;
-import com.filecomparator.parser.ParserFactory;
+import com.filecomparator.service.ParserFactory;
 import com.filecomparator.report.ExcelReportGenerator;
 import com.filecomparator.report.WordReportGenerator;
 import com.filecomparator.service.ComparatorService;

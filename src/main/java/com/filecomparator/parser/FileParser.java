@@ -4,5 +4,6 @@ import com.filecomparator.model.FileContent;
 import java.io.IOException;
 
 public interface FileParser {
-    FileContent parse(String filePath) throws IOException;
+    boolean canParse(String input);
+    FileContent parse(String input) throws IOException;
 }

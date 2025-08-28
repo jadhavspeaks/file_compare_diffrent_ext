@@ -25,17 +25,22 @@ public class CsvParser implements FileParser {
     private static final Logger logger = LoggerFactory.getLogger(CsvParser.class);
 
     @Override
-    public FileContent parse(String filePath) throws IOException {
-        logger.info("Parsing CSV file: {}", filePath);
+    public boolean canParse(String input) {
+        return input.toLowerCase().endsWith(".csv");
+    }
+
+    @Override
+    public FileContent parse(String input) throws IOException {
+        logger.info("Parsing CSV file: {}", input);
         FileContent fileContent = new FileContent();
 
         // Extract raw text
-        String text = new String(Files.readAllBytes(Paths.get(filePath)));
+        String text = new String(Files.readAllBytes(Paths.get(input)));
         fileContent.setText(text);
 
         // Extract table data
-        try (Reader reader = new FileReader(filePath)) {
-            char delimiter = detectDelimiter(filePath);
+        try (Reader reader = new FileReader(input)) {
+            char delimiter = detectDelimiter(input);
             CSVFormat csvFormat = CSVFormat.DEFAULT.withDelimiter(delimiter).withHeader();
             CSVParser csvParser = new CSVParser(reader, csvFormat);
 
@@ -49,11 +54,11 @@ public class CsvParser implements FileParser {
         return fileContent;
     }
 
-    private char detectDelimiter(String filePath) throws IOException {
+    private char detectDelimiter(String input) throws IOException {
         List<Character> delimiters = Arrays.asList(',', ';', '\t', '|');
         Map<Character, Integer> delimiterCounts = new HashMap<>();
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(input))) {
             int lineCount = 0;
             String line;
             while ((line = reader.readLine()) != null && lineCount < 5) { // Check first 5 lines

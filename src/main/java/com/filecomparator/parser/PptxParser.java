@@ -22,12 +22,17 @@ public class PptxParser implements FileParser {
     private static final Logger logger = LoggerFactory.getLogger(PptxParser.class);
 
     @Override
-    public FileContent parse(String filePath) throws IOException {
-        logger.info("Parsing PowerPoint file: {}", filePath);
+    public boolean canParse(String input) {
+        return input.toLowerCase().endsWith(".pptx");
+    }
+
+    @Override
+    public FileContent parse(String input) throws IOException {
+        logger.info("Parsing PowerPoint file: {}", input);
         FileContent fileContent = new FileContent();
         StringBuilder textBuilder = new StringBuilder();
 
-        try (FileInputStream fis = new FileInputStream(new File(filePath));
+        try (FileInputStream fis = new FileInputStream(new File(input));
              XMLSlideShow ppt = new XMLSlideShow(fis)) {
 
             logger.debug("Found {} slides in the PowerPoint file.", ppt.getSlides().size());
@@ -53,7 +58,7 @@ public class PptxParser implements FileParser {
         }
 
         if (fileContent.getTables().isEmpty()) {
-            logger.info("No tables found in PowerPoint file: {}", filePath);
+            logger.info("No tables found in PowerPoint file: {}", input);
         }
 
         fileContent.setText(textBuilder.toString());
