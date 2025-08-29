@@ -2,6 +2,7 @@ package com.filecomparator.parser;
 
 import com.filecomparator.model.FileContent;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.util.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +15,7 @@ import java.util.List;
 public class ExcelParser implements FileParser {
 
     private static final Logger logger = LoggerFactory.getLogger(ExcelParser.class);
+    private static final int MAX_BYTE_ARRAY_OVERRIDE = 200_000_000; // 200MB, well above default
 
     @Override
     public boolean canParse(String input) {
@@ -24,6 +26,10 @@ public class ExcelParser implements FileParser {
     @Override
     public FileContent parse(String input) throws IOException {
         logger.info("Parsing Excel file: {}", input);
+
+        // Override POI's default limits to handle large files
+        IOUtils.setByteArrayMaxOverride(MAX_BYTE_ARRAY_OVERRIDE);
+
         FileContent fileContent = new FileContent();
         StringBuilder textBuilder = new StringBuilder();
 
@@ -47,10 +53,6 @@ public class ExcelParser implements FileParser {
                 fileContent.addTable(table);
                 textBuilder.append("\n");
             }
-        }
-
-        if (fileContent.getTables().isEmpty()) {
-            logger.info("No tables (sheets) found in Excel file: {}", input);
         }
 
         fileContent.setText(textBuilder.toString());
