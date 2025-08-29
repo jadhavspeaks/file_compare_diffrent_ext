@@ -3,20 +3,18 @@ package com.filecomparator.parser;
 import com.filecomparator.model.FileContent;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import technology.tabula.ObjectExtractor;
 import technology.tabula.Page;
-import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import technology.tabula.PageIterator;
 import technology.tabula.RectangularTextContainer;
 import technology.tabula.Table;
 import technology.tabula.extractors.SpreadsheetExtractionAlgorithm;
 
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,22 +35,15 @@ public class PdfParser implements FileParser {
         FileContent fileContent = new FileContent();
 
         try (PDDocument document = Loader.loadPDF(new File(input))) {
-            // Extract text
             PDFTextStripper pdfStripper = new PDFTextStripper();
-            String text = pdfStripper.getText(document);
-            fileContent.setText(text);
-            logger.debug("PDF text extraction complete. Extracted {} characters.", text.length());
+            fileContent.setText(pdfStripper.getText(document));
 
-            // Extract tables with Tabula
-            logger.info("Extracting tables from PDF file: {}", input);
             SpreadsheetExtractionAlgorithm sea = new SpreadsheetExtractionAlgorithm();
             ObjectExtractor oe = new ObjectExtractor(document);
             PageIterator pi = oe.extract();
-
             while (pi.hasNext()) {
                 Page page = pi.next();
-                List<Table> tables = sea.extract(page);
-                for (Table table : tables) {
+                for (Table table : sea.extract(page)) {
                     List<List<String>> convertedTable = new ArrayList<>();
                     for (List<RectangularTextContainer> row : table.getRows()) {
                         List<String> rowData = new ArrayList<>();
@@ -64,27 +55,16 @@ public class PdfParser implements FileParser {
                     fileContent.addTable(convertedTable);
                 }
             }
-            logger.info("PDF table extraction complete. Found {} tables.", fileContent.getTables().size());
 
-            // Extract images with PDFBox
-            logger.info("Extracting images from PDF file: {}", input);
             for (PDPage page : document.getPages()) {
-                for (COSName name : page.getResources().getXObjectNames()) {
+                if(page.getResources() == null) continue;
+                for (var name : page.getResources().getXObjectNames()) {
                     if (page.getResources().isImageXObject(name)) {
-                        fileContent.addImage(((org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject) page.getResources().getXObject(name)).getImage());
+                        fileContent.addImage(((PDImageXObject) page.getResources().getXObject(name)).getImage());
                     }
                 }
             }
-            logger.info("PDF image extraction complete. Found {} images.", fileContent.getImages().size());
-
-            if (fileContent.getTables().isEmpty()) {
-                logger.info("No tables found in PDF file: {}", input);
-            }
-            if (fileContent.getImages().isEmpty()) {
-                logger.info("No images found in PDF file: {}", input);
-            }
         }
-
         return fileContent;
     }
 }

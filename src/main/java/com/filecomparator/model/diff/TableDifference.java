@@ -6,7 +6,7 @@ public class TableDifference {
         CELL_DIFFERENCE,
         COLUMN_DELETED,
         COLUMN_ADDED,
-        TABLE_SUMMARY // For table-level messages like "No Match Found"
+        TABLE_SUMMARY
     }
 
     private final DiffType type;
@@ -17,7 +17,6 @@ public class TableDifference {
     private final String value1;
     private final String value2;
 
-    // Constructor for cell differences
     public TableDifference(int tableIndex1, int tableIndex2, int rowIndex, int colIndex, String value1, String value2) {
         this.type = DiffType.CELL_DIFFERENCE;
         this.tableIndex1 = tableIndex1;
@@ -28,7 +27,6 @@ public class TableDifference {
         this.value2 = value2;
     }
 
-    // Constructor for column differences
     public TableDifference(DiffType type, int tableIndex1, int tableIndex2, String columnName) {
         if (type != DiffType.COLUMN_ADDED && type != DiffType.COLUMN_DELETED) {
             throw new IllegalArgumentException("This constructor is for column-level differences only.");
@@ -42,7 +40,6 @@ public class TableDifference {
         this.value2 = (type == DiffType.COLUMN_ADDED) ? columnName : "";
     }
 
-    // Constructor for summary messages
     public TableDifference(int tableIndex1, int tableIndex2, String summaryMessage) {
         this.type = DiffType.TABLE_SUMMARY;
         this.tableIndex1 = tableIndex1;
@@ -53,8 +50,6 @@ public class TableDifference {
         this.value2 = "";
     }
 
-
-    // Getters
     public DiffType getType() { return type; }
     public int getTableIndex1() { return tableIndex1; }
     public int getTableIndex2() { return tableIndex2; }

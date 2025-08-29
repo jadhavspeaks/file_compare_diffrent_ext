@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 public class TxtParser implements FileParser {
 
     private static final Logger logger = LoggerFactory.getLogger(TxtParser.class);
-    private static final int MIN_TABLE_ROWS = 3; // Minimum number of consecutive rows to be considered a table
+    private static final int MIN_TABLE_ROWS = 3;
 
     @Override
     public boolean canParse(String input) {
@@ -51,29 +51,25 @@ public class TxtParser implements FileParser {
         flushTable(potentialTableLines, currentDelimiter, fileContent, textBuilder);
 
         fileContent.setText(textBuilder.toString());
-        logger.debug("Text file parsing complete.");
         return fileContent;
     }
 
     private String guessDelimiter(String line) {
-        if (line.split("\\s{2,}").length > 1) return "\\s{2,}"; // Two or more spaces
-        if (line.split("\t").length > 1) return "\t"; // Tab
-        if (line.split("\\|").length > 1) return "|"; // Pipe
+        if (line.split("\\s{2,}").length > 1) return "\\s{2,}";
+        if (line.split("\t").length > 1) return "\t";
+        if (line.split("\\|").length > 1) return "|";
         return null;
     }
 
     private void flushTable(List<String> potentialTableLines, String delimiter, FileContent fileContent, StringBuilder textBuilder) {
         if (potentialTableLines.size() >= MIN_TABLE_ROWS) {
-            logger.info("Detected a potential table with {} rows.", potentialTableLines.size());
             List<List<String>> table = new ArrayList<>();
             for (String tableLine : potentialTableLines) {
                 table.add(Arrays.asList(tableLine.split(Pattern.quote(delimiter))));
             }
             fileContent.addTable(table);
         } else {
-            for (String line : potentialTableLines) {
-                textBuilder.append(line).append("\n");
-            }
+            potentialTableLines.forEach(line -> textBuilder.append(line).append("\n"));
         }
         potentialTableLines.clear();
     }

@@ -1,3 +1,0 @@
-This is the second sample text file.
-It has multiple lines.
-The third line is different in this file.

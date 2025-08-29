@@ -34,13 +34,7 @@ public class ComparatorService {
     }
 
     private void compareText(String text1, String text2, ComparisonReport report) {
-        if (text1 == null && text2 == null) return;
-        if (text1 == null) {
-            report.addTextDifference(new TextDifference(TextDifference.DiffType.INSERT, "", text2));
-            return;
-        }
-        if (text2 == null) {
-            report.addTextDifference(new TextDifference(TextDifference.DiffType.DELETE, text1, ""));
+        if (text1 == null || text2 == null || (text1.isEmpty() && text2.isEmpty())) {
             return;
         }
 

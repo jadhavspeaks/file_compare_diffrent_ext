@@ -1,8 +1,8 @@
 com.filecomparator.parser.CsvParser
+com.filecomparator.parser.DocxParser
 com.filecomparator.parser.ExcelParser
 com.filecomparator.parser.ImageFileParser
 com.filecomparator.parser.PdfParser
-com.filecomparator.parser.DocxParser
 com.filecomparator.parser.PptxParser
 com.filecomparator.parser.TxtParser
 com.filecomparator.parser.UrlParser

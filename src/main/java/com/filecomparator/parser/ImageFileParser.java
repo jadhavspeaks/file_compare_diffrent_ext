@@ -23,15 +23,12 @@ public class ImageFileParser implements FileParser {
     public FileContent parse(String input) throws IOException {
         logger.info("Parsing image file: {}", input);
         FileContent fileContent = new FileContent();
-
         BufferedImage image = ImageIO.read(new File(input));
         if (image != null) {
             fileContent.addImage(image);
-            logger.debug("Image file parsing complete.");
         } else {
             logger.warn("Could not read image file: {}", input);
         }
-
         return fileContent;
     }
 }

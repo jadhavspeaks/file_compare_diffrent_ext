@@ -47,16 +47,13 @@ public class Main {
             return;
         }
 
-
         try {
             logger.info("Starting comparison for inputs: {} and {}", source1, source2);
-
             Optional<FileParser> parser1Opt = ParserFactory.getParser(source1);
             if (parser1Opt.isEmpty()) {
                 logger.error("Unsupported input type for: {}", source1);
                 return;
             }
-            logger.info("Parsing input 1: {}", source1);
             FileContent content1 = parser1Opt.get().parse(source1);
 
             Optional<FileParser> parser2Opt = ParserFactory.getParser(source2);
@@ -64,14 +61,11 @@ public class Main {
                 logger.error("Unsupported input type for: {}", source2);
                 return;
             }
-            logger.info("Parsing input 2: {}", source2);
             FileContent content2 = parser2Opt.get().parse(source2);
 
-            logger.info("Comparing content...");
             ComparatorService comparator = new ComparatorService();
             ComparisonReport report = comparator.compare(content1, content2);
 
-            logger.info("Generating report...");
             if (outputPath.toLowerCase().endsWith(".xlsx")) {
                 new ExcelReportGenerator().generateReport(report, outputPath);
             } else if (outputPath.toLowerCase().endsWith(".docx")) {
@@ -80,7 +74,6 @@ public class Main {
                 logger.error("Unsupported output file format. Please use .xlsx or .docx");
                 return;
             }
-
             logger.info("Comparison finished. Report generated at: {}", outputPath);
 
         } catch (IOException e) {

@@ -31,14 +31,11 @@ public class DocxParser implements FileParser {
         try (FileInputStream fis = new FileInputStream(new File(input));
              XWPFDocument document = new XWPFDocument(fis)) {
 
-            // Extract text from paragraphs
             for (XWPFParagraph paragraph : document.getParagraphs()) {
                 textBuilder.append(paragraph.getText()).append("\n");
             }
             fileContent.setText(textBuilder.toString());
-            logger.debug("DOCX text extraction complete.");
 
-            // Extract tables
             for (XWPFTable table : document.getTables()) {
                 List<List<String>> convertedTable = new ArrayList<>();
                 for (XWPFTableRow row : table.getRows()) {
@@ -50,16 +47,12 @@ public class DocxParser implements FileParser {
                 }
                 fileContent.addTable(convertedTable);
             }
-            logger.info("DOCX table extraction complete. Found {} tables.", fileContent.getTables().size());
 
-            // Extract images
             for (XWPFPictureData picture : document.getAllPictures()) {
                 byte[] bytes = picture.getData();
                 fileContent.addImage(ImageIO.read(new ByteArrayInputStream(bytes)));
             }
-            logger.info("DOCX image extraction complete. Found {} images.", fileContent.getImages().size());
         }
-
         return fileContent;
     }
 }

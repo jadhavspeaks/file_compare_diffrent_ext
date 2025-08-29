@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FileContent {
-
     private String text;
     private final List<List<List<String>>> tables = new ArrayList<>();
     private final List<BufferedImage> images = new ArrayList<>();

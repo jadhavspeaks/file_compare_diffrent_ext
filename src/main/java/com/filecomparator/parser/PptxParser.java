@@ -1,13 +1,7 @@
 package com.filecomparator.parser;
 
 import com.filecomparator.model.FileContent;
-import org.apache.poi.xslf.usermodel.XMLSlideShow;
-import org.apache.poi.xslf.usermodel.XSLFShape;
-import org.apache.poi.xslf.usermodel.XSLFSlide;
-import org.apache.poi.xslf.usermodel.XSLFTable;
-import org.apache.poi.xslf.usermodel.XSLFTableCell;
-import org.apache.poi.xslf.usermodel.XSLFTableRow;
-import org.apache.poi.xslf.usermodel.XSLFTextShape;
+import org.apache.poi.xslf.usermodel.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,12 +29,10 @@ public class PptxParser implements FileParser {
         try (FileInputStream fis = new FileInputStream(new File(input));
              XMLSlideShow ppt = new XMLSlideShow(fis)) {
 
-            logger.debug("Found {} slides in the PowerPoint file.", ppt.getSlides().size());
             for (XSLFSlide slide : ppt.getSlides()) {
                 for (XSLFShape shape : slide.getShapes()) {
                     if (shape instanceof XSLFTextShape) {
-                        XSLFTextShape textShape = (XSLFTextShape) shape;
-                        textBuilder.append(textShape.getText()).append("\n");
+                        textBuilder.append(((XSLFTextShape) shape).getText()).append("\n");
                     } else if (shape instanceof XSLFTable) {
                         XSLFTable pptxTable = (XSLFTable) shape;
                         List<List<String>> table = new ArrayList<>();
@@ -56,13 +48,7 @@ public class PptxParser implements FileParser {
                 }
             }
         }
-
-        if (fileContent.getTables().isEmpty()) {
-            logger.info("No tables found in PowerPoint file: {}", input);
-        }
-
         fileContent.setText(textBuilder.toString());
-        logger.debug("PowerPoint file parsing complete.");
         return fileContent;
     }
 }

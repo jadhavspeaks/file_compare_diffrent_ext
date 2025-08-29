@@ -11,8 +11,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,21 +33,25 @@ public class CsvParser implements FileParser {
         logger.info("Parsing CSV file: {}", input);
         FileContent fileContent = new FileContent();
 
-        // Extract raw text
-        String text = new String(Files.readAllBytes(Paths.get(input)));
-        fileContent.setText(text);
-
-        // Extract table data
+        // Only extract table data, not raw text, to avoid redundant comparisons.
         try (Reader reader = new FileReader(input)) {
             char delimiter = detectDelimiter(input);
-            CSVFormat csvFormat = CSVFormat.DEFAULT.withDelimiter(delimiter).withHeader();
+            // Use withFirstRecordAsHeader() to correctly handle the header row
+            CSVFormat csvFormat = CSVFormat.DEFAULT.withDelimiter(delimiter).withFirstRecordAsHeader();
             CSVParser csvParser = new CSVParser(reader, csvFormat);
 
-            List<List<String>> table = csvParser.getRecords().stream()
-                    .map(CSVRecord::toList)
-                    .collect(Collectors.toList());
-            fileContent.addTable(table);
-            logger.debug("CSV parsing complete. Found {} rows.", table.size());
+            // Add header to the table data
+            List<String> header = csvParser.getHeaderNames();
+            List<List<String>> tableData = new ArrayList<>();
+            tableData.add(header);
+
+            // Add records
+            for (CSVRecord record : csvParser) {
+                tableData.add(record.toList());
+            }
+
+            fileContent.addTable(tableData);
+            logger.debug("CSV parsing complete. Found {} data rows.", tableData.size() - 1);
         }
 
         return fileContent;
@@ -59,16 +62,14 @@ public class CsvParser implements FileParser {
         Map<Character, Integer> delimiterCounts = new HashMap<>();
 
         try (BufferedReader reader = new BufferedReader(new FileReader(input))) {
-            int lineCount = 0;
-            String line;
-            while ((line = reader.readLine()) != null && lineCount < 5) { // Check first 5 lines
+            String line = reader.readLine(); // Only check the first line (usually the header)
+            if (line != null) {
                 for (char delim : delimiters) {
                     int count = (int) line.chars().filter(c -> c == delim).count();
                     if (count > 0) {
-                        delimiterCounts.put(delim, delimiterCounts.getOrDefault(delim, 0) + count);
+                        delimiterCounts.put(delim, count);
                     }
                 }
-                lineCount++;
             }
         }
 
@@ -76,7 +77,6 @@ public class CsvParser implements FileParser {
             return ','; // Default
         }
 
-        // Return the delimiter with the highest count
         return Collections.max(delimiterCounts.entrySet(), Map.Entry.comparingByValue()).getKey();
     }
 }

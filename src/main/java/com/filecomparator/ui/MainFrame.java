@@ -12,8 +12,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -36,7 +34,7 @@ public class MainFrame extends JFrame {
 
     public MainFrame() {
         setTitle("File Comparator");
-        setSize(700, 450); // Increased height for new components
+        setSize(700, 450);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new GridBagLayout());
@@ -47,11 +45,9 @@ public class MainFrame extends JFrame {
         gbc.insets = new Insets(5, 5, 5, 5);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        // --- Source 1 & 2 Panels ---
         add(createSourcePanel(1), createGbc(0, 0, 4));
         add(createSourcePanel(2), createGbc(0, 1, 4));
 
-        // --- Button Panel ---
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         compareButton = new JButton("Compare");
         JButton closeButton = new JButton("Close");
@@ -59,22 +55,19 @@ public class MainFrame extends JFrame {
         buttonPanel.add(closeButton);
         add(buttonPanel, createGbc(0, 2, 4));
 
-        // --- Progress Bar ---
         progressBar = new JProgressBar(0, 100);
         progressBar.setStringPainted(true);
-        progressBar.setVisible(false); // Initially hidden
+        progressBar.setVisible(false);
         add(progressBar, createGbc(0, 3, 4));
 
-        // --- Result Text Area ---
         resultTextArea = new JTextArea(8, 60);
         resultTextArea.setEditable(false);
         resultTextArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
         JScrollPane scrollPane = new JScrollPane(resultTextArea);
         add(scrollPane, createGbc(0, 4, 4));
 
-        // --- Action Listeners ---
         compareButton.addActionListener(e -> {
-            resultTextArea.setText(""); // Clear previous results
+            resultTextArea.setText("");
             compareButton.setEnabled(false);
             progressBar.setValue(0);
             progressBar.setVisible(true);
@@ -117,10 +110,7 @@ public class MainFrame extends JFrame {
             }
         });
 
-        typeComboBox.addActionListener(e -> {
-            boolean isUrl = "URL".equals(typeComboBox.getSelectedItem());
-            browseButton.setEnabled(!isUrl);
-        });
+        typeComboBox.addActionListener(e -> browseButton.setEnabled(!"URL".equals(typeComboBox.getSelectedItem())));
 
         return panel;
     }
@@ -135,10 +125,7 @@ public class MainFrame extends JFrame {
         return gbc;
     }
 
-
     private class CompareWorker extends SwingWorker<ComparisonReport, Integer> {
-        private Exception error = null;
-
         @Override
         protected ComparisonReport doInBackground() throws Exception {
             String source1 = path1TextField.getText();
@@ -148,20 +135,15 @@ public class MainFrame extends JFrame {
                 throw new Exception("Please provide paths/URLs for both sources.");
             }
 
-            publish(10); // Progress update
-            logger.info("Parsing source 1...");
+            publish(10);
             FileContent content1 = ParserFactory.getParser(source1).orElseThrow(() -> new IOException("Unsupported type for source 1")).parse(source1);
-
             publish(30);
-            logger.info("Parsing source 2...");
             FileContent content2 = ParserFactory.getParser(source2).orElseThrow(() -> new IOException("Unsupported type for source 2")).parse(source2);
-
             publish(50);
-            logger.info("Comparing content...");
             ComparatorService comparator = new ComparatorService();
             ComparisonReport report = comparator.compare(content1, content2);
-
             publish(70);
+
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setDialogTitle("Select Folder to Save Reports");
             fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -174,59 +156,43 @@ public class MainFrame extends JFrame {
                 String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
                 String baseFileName = String.format("%s_vs_%s_Compare_%s", type1, type2, timestamp);
 
-                String docxPath = basePath + File.separator + baseFileName + ".docx";
-                String xlsxPath = basePath + File.separator + baseFileName + ".xlsx";
-
                 publish(80);
-                logger.info("Saving Word report to: {}", docxPath);
-                new WordReportGenerator().generateReport(report, docxPath);
-
+                new WordReportGenerator().generateReport(report, basePath + File.separator + baseFileName + ".docx");
                 publish(90);
-                logger.info("Saving Excel report to: {}", xlsxPath);
-                new ExcelReportGenerator().generateReport(report, xlsxPath);
-
+                new ExcelReportGenerator().generateReport(report, basePath + File.separator + baseFileName + ".xlsx");
                 publish(100);
                 return report;
-            } else {
-                // User cancelled the save dialog
-                return null;
             }
+            return null; // User cancelled save
         }
 
         @Override
         protected void process(List<Integer> chunks) {
-            int latestProgress = chunks.get(chunks.size() - 1);
-            progressBar.setValue(latestProgress);
+            progressBar.setValue(chunks.get(chunks.size() - 1));
         }
 
         @Override
         protected void done() {
             compareButton.setEnabled(true);
             progressBar.setValue(100);
-
             try {
                 ComparisonReport report = get();
                 if (report != null) {
                     resultTextArea.setText(generateReportSummary(report));
-                    JOptionPane.showMessageDialog(MainFrame.this, "Comparison complete and reports saved!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(MainFrame.this, "Comparison complete!", "Success", JOptionPane.INFORMATION_MESSAGE);
                 } else {
-                    // Handle case where user cancelled save dialog
                     resultTextArea.setText("Comparison cancelled by user.");
                     progressBar.setVisible(false);
                 }
-            } catch (InterruptedException | ExecutionException e) {
-                this.error = (Exception) e.getCause();
-                logger.error("An error occurred during comparison", error);
-                resultTextArea.setText("An error occurred:\n" + error.getMessage());
-                JOptionPane.showMessageDialog(MainFrame.this, "An error occurred:\n" + error.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            } catch (Exception e) {
+                logger.error("An error occurred during comparison", e.getCause());
+                resultTextArea.setText("An error occurred:\n" + e.getCause().getMessage());
+                JOptionPane.showMessageDialog(MainFrame.this, "An error occurred:\n" + e.getCause().getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
 
         private String generateReportSummary(ComparisonReport report) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("--- Comparison Summary ---\n\n");
-
-            // Text differences
+            StringBuilder sb = new StringBuilder("--- Comparison Summary ---\n\n");
             long textAdditions = report.getTextDifferences().stream().filter(d -> d.getType() == TextDifference.DiffType.INSERT).count();
             long textDeletions = report.getTextDifferences().stream().filter(d -> d.getType() == TextDifference.DiffType.DELETE).count();
             long textChanges = report.getTextDifferences().stream().filter(d -> d.getType() == TextDifference.DiffType.CHANGE).count();
@@ -234,15 +200,9 @@ public class MainFrame extends JFrame {
             sb.append(String.format("  - Additions: %d\n", textAdditions));
             sb.append(String.format("  - Deletions: %d\n", textDeletions));
             sb.append(String.format("  - Changes:   %d\n\n", textChanges));
-
-            // Table differences
             sb.append(String.format("Table Differences: %d\n\n", report.getTableDifferences().size()));
-
-            // Image differences
             sb.append(String.format("Image Differences: %d\n\n", report.getImageDifferences().size()));
-
             sb.append("Reports saved to the selected folder.");
-
             return sb.toString();
         }
     }

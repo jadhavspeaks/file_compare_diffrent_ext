@@ -102,7 +102,6 @@ public class ExcelReportGenerator {
             sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 5));
             subHeaderCell.setCellStyle(headerStyle);
 
-            // Column differences
             long addedCount = diffs.stream().filter(d -> d.getType() == TableDifference.DiffType.COLUMN_ADDED).count();
             long deletedCount = diffs.stream().filter(d -> d.getType() == TableDifference.DiffType.COLUMN_DELETED).count();
             if (addedCount > 0 || deletedCount > 0) {
@@ -122,7 +121,6 @@ public class ExcelReportGenerator {
                 }
             }
 
-            // Cell differences
             List<TableDifference> cellDiffs = diffs.stream().filter(d -> d.getType() == TableDifference.DiffType.CELL_DIFFERENCE).collect(Collectors.toList());
             if(!cellDiffs.isEmpty()) {
                 Row cellHeaderRow = sheet.createRow(rowNum++);

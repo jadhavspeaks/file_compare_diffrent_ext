@@ -13,10 +13,10 @@ public class ParserFactory {
     private static final ServiceLoader<FileParser> loader = ServiceLoader.load(FileParser.class);
 
     public static Optional<FileParser> getParser(String input) {
-        logger.info("Attempting to find parser for input: {}", input);
+        logger.debug("Attempting to find parser for input: {}", input);
         for (FileParser parser : loader) {
             if (parser.canParse(input)) {
-                logger.info("Found suitable parser: {}", parser.getClass().getSimpleName());
+                logger.debug("Found suitable parser: {}", parser.getClass().getSimpleName());
                 return Optional.of(parser);
             }
         }

@@ -8,12 +8,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ComparisonReport {
-
     private String summary;
     private final List<TextDifference> textDifferences = new ArrayList<>();
     private final List<TableDifference> tableDifferences = new ArrayList<>();
     private final List<ImageDifference> imageDifferences = new ArrayList<>();
-
 
     public String getSummary() {
         return summary;

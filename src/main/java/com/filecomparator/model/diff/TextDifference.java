@@ -3,7 +3,7 @@ package com.filecomparator.model.diff;
 public class TextDifference {
 
     public enum DiffType {
-        INSERT, DELETE, CHANGE, EQUAL
+        INSERT, DELETE, CHANGE
     }
 
     private final DiffType type;
