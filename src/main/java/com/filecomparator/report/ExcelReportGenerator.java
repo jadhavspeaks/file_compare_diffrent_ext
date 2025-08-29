@@ -13,6 +13,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ExcelReportGenerator {
@@ -92,7 +93,11 @@ public class ExcelReportGenerator {
         CellStyle deletedStyle = createStyle(workbook, IndexedColors.ROSE, false);
         CellStyle headerStyle = createStyle(workbook, IndexedColors.GREY_25_PERCENT, true);
 
-        for (List<TableDifference> diffs : report.getTableDifferences().stream().collect(Collectors.groupingBy(d -> d.getTableIndex1() + ":" + d.getTableIndex2())).values()) {
+        Map<String, List<TableDifference>> diffsByTable = report.getTableDifferences().stream()
+              .collect(Collectors.groupingBy(d -> d.getTableIndex1() + ":" + d.getTableIndex2()));
+
+        for (Map.Entry<String, List<TableDifference>> entry : diffsByTable.entrySet()) {
+            List<TableDifference> diffs = entry.getValue();
             int tableIndex1 = diffs.get(0).getTableIndex1();
             int tableIndex2 = diffs.get(0).getTableIndex2();
 
@@ -102,33 +107,43 @@ public class ExcelReportGenerator {
             sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 5));
             subHeaderCell.setCellStyle(headerStyle);
 
-            long addedCount = diffs.stream().filter(d -> d.getType() == TableDifference.DiffType.COLUMN_ADDED).count();
-            long deletedCount = diffs.stream().filter(d -> d.getType() == TableDifference.DiffType.COLUMN_DELETED).count();
-            if (addedCount > 0 || deletedCount > 0) {
-                 Row summaryRow = sheet.createRow(rowNum++);
-                 summaryRow.createCell(0).setCellValue(String.format("Column Summary: %d columns added, %d columns deleted.", addedCount, deletedCount));
-                 sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 5));
-            }
-
-            for (TableDifference diff : diffs) {
-                if (diff.getType() == TableDifference.DiffType.COLUMN_ADDED || diff.getType() == TableDifference.DiffType.COLUMN_DELETED) {
+            List<TableDifference> columnDiffs = diffs.stream().filter(d -> d.getType() != TableDifference.DiffType.CELL_DIFFERENCE).collect(Collectors.toList());
+            if (!columnDiffs.isEmpty()) {
+                Row columnHeader = sheet.createRow(rowNum++);
+                columnHeader.createCell(0).setCellValue("Column Changes");
+                columnHeader.getCell(0).setCellStyle(headerStyle);
+                for (TableDifference diff : columnDiffs) {
                     Row row = sheet.createRow(rowNum++);
-                    String changeType = diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? "Column Missing in Source 1" : "Column Missing in Source 2";
-                    String colName = diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? diff.getValue2() : diff.getValue1();
+                    String changeType;
+                    String value;
+                    CellStyle style;
+                    if (diff.getType() == TableDifference.DiffType.COLUMN_DELETED) {
+                        changeType = "Column Missing in Source 2";
+                        value = diff.getValue1();
+                        style = deletedStyle;
+                    } else if (diff.getType() == TableDifference.DiffType.COLUMN_ADDED) {
+                        changeType = "Column Missing in Source 1";
+                        value = diff.getValue2();
+                        style = addedStyle;
+                    } else {
+                        changeType = "Summary";
+                        value = diff.getValue1();
+                        style = createStyle(workbook, IndexedColors.GREY_25_PERCENT, false);
+                    }
                     row.createCell(0).setCellValue(changeType);
-                    row.createCell(1).setCellValue(colName);
-                    row.getCell(0).setCellStyle(diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? addedStyle : deletedStyle);
+                    row.createCell(1).setCellValue(value);
+                    row.getCell(0).setCellStyle(style);
                 }
             }
 
             List<TableDifference> cellDiffs = diffs.stream().filter(d -> d.getType() == TableDifference.DiffType.CELL_DIFFERENCE).collect(Collectors.toList());
-            if(!cellDiffs.isEmpty()) {
+            if (!cellDiffs.isEmpty()) {
                 Row cellHeaderRow = sheet.createRow(rowNum++);
                 cellHeaderRow.createCell(0).setCellValue("Row");
                 cellHeaderRow.createCell(1).setCellValue("Column Index");
                 cellHeaderRow.createCell(2).setCellValue("Source 1 Value");
                 cellHeaderRow.createCell(3).setCellValue("Source 2 Value");
-                cellHeaderRow.setRowStyle(createStyle(workbook, null, true));
+                cellHeaderRow.setRowStyle(headerStyle);
 
                 for(TableDifference diff : cellDiffs) {
                     Row row = sheet.createRow(rowNum++);
@@ -161,12 +176,8 @@ public class ExcelReportGenerator {
                 Row imageRow = sheet.createRow(rowNum);
                 imageRow.setHeightInPoints(200);
 
-                if (diff.getImage1() != null) {
-                    addPictureToSheet(workbook, drawing, helper, diff.getImage1(), 0, rowNum);
-                }
-                if (diff.getImage2() != null) {
-                    addPictureToSheet(workbook, drawing, helper, diff.getImage2(), 5, rowNum);
-                }
+                if (diff.getImage1() != null) addPictureToSheet(workbook, drawing, helper, diff.getImage1(), 0, rowNum);
+                if (diff.getImage2() != null) addPictureToSheet(workbook, drawing, helper, diff.getImage2(), 5, rowNum);
                 rowNum += 12;
             } catch (Exception e) {
                 sheet.createRow(rowNum++).createCell(0).setCellValue("Error embedding image: " + e.getMessage());

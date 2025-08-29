@@ -13,6 +13,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class WordReportGenerator {
@@ -67,12 +68,8 @@ public class WordReportGenerator {
             row.getCell(0).setText(diff.getText1());
             row.getCell(1).setText(diff.getText2());
             switch (diff.getType()) {
-                case INSERT:
-                    row.getCell(1).setColor("C7F0C7"); // Light Green
-                    break;
-                case DELETE:
-                    row.getCell(0).setColor("F0C7C7"); // Light Red
-                    break;
+                case INSERT: row.getCell(1).setColor("C7F0C7"); break;
+                case DELETE: row.getCell(0).setColor("F0C7C7"); break;
                 case CHANGE:
                     row.getCell(0).setColor("F0C7C7");
                     row.getCell(1).setColor("C7F0C7");
@@ -89,64 +86,69 @@ public class WordReportGenerator {
         mainRun.setFontSize(14);
         mainRun.setText("Table Differences");
 
-        report.getTableDifferences().stream()
-              .collect(Collectors.groupingBy(d -> d.getTableIndex1() + ":" + d.getTableIndex2()))
-              .forEach((key, diffs) -> {
-                  int tableIndex1 = diffs.get(0).getTableIndex1();
-                  int tableIndex2 = diffs.get(0).getTableIndex2();
+        Map<String, List<TableDifference>> diffsByTable = report.getTableDifferences().stream()
+              .collect(Collectors.groupingBy(d -> d.getTableIndex1() + ":" + d.getTableIndex2()));
 
-                  XWPFParagraph subHeader = document.createParagraph();
-                  subHeader.setSpacingBefore(200);
-                  XWPFRun subRun = subHeader.createRun();
-                  subRun.setBold(true);
-                  subRun.setItalic(true);
-                  subRun.setText(String.format("Comparison for Table %d (Source 1) vs Table %d (Source 2)", tableIndex1 + 1, tableIndex2 + 1));
+        for (Map.Entry<String, List<TableDifference>> entry : diffsByTable.entrySet()) {
+            List<TableDifference> diffs = entry.getValue();
+            int tableIndex1 = diffs.get(0).getTableIndex1();
+            int tableIndex2 = diffs.get(0).getTableIndex2();
 
-                  // Report Column-level differences
-                  List<TableDifference> columnDiffs = diffs.stream()
-                      .filter(d -> d.getType() == TableDifference.DiffType.COLUMN_ADDED || d.getType() == TableDifference.DiffType.COLUMN_DELETED)
-                      .collect(Collectors.toList());
+            XWPFParagraph subHeader = document.createParagraph();
+            subHeader.setSpacingBefore(200);
+            XWPFRun subRun = subHeader.createRun();
+            subRun.setBold(true);
+            subRun.setItalic(true);
+            subRun.setText(String.format("Comparison for Table %d (Source 1) vs Table %d (Source 2)", tableIndex1 + 1, tableIndex2 + 1));
 
-                  if(!columnDiffs.isEmpty()){
-                      long added = columnDiffs.stream().filter(d -> d.getType() == TableDifference.DiffType.COLUMN_ADDED).count();
-                      long deleted = columnDiffs.stream().filter(d -> d.getType() == TableDifference.DiffType.COLUMN_DELETED).count();
-                      document.createParagraph().createRun().setText(String.format("Column Summary: %d columns added, %d columns deleted.", added, deleted));
+            List<TableDifference> columnDiffs = diffs.stream().filter(d -> d.getType() != TableDifference.DiffType.CELL_DIFFERENCE).collect(Collectors.toList());
+            if (!columnDiffs.isEmpty()) {
+                XWPFParagraph columnHeader = document.createParagraph();
+                XWPFRun columnRun = columnHeader.createRun();
+                columnRun.setBold(true);
+                columnRun.setText("Column Summary:");
+                for (TableDifference diff : columnDiffs) {
+                    XWPFParagraph p = document.createParagraph();
+                    p.setIndentationLeft(400);
+                    XWPFRun pRun = p.createRun();
+                    if (diff.getType() == TableDifference.DiffType.COLUMN_DELETED) {
+                        pRun.setText("Column Missing in Source 2: '" + diff.getValue1() + "'");
+                    } else if (diff.getType() == TableDifference.DiffType.COLUMN_ADDED) {
+                        pRun.setText("Column Missing in Source 1: '" + diff.getValue2() + "'");
+                    } else if (diff.getType() == TableDifference.DiffType.TABLE_SUMMARY){
+                         pRun.setBold(true);
+                         pRun.setText(diff.getValue1());
+                    }
+                }
+            }
 
-                      for(TableDifference diff : columnDiffs){
-                          String changeType = diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? "Column Missing in Source 1" : "Column Missing in Source 2";
-                          String columnName = diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? diff.getValue2() : diff.getValue1();
-                          document.createParagraph().createRun().setText(String.format("  - %s: '%s'", changeType, columnName));
-                      }
-                  }
+            List<TableDifference> cellDiffs = diffs.stream().filter(d -> d.getType() == TableDifference.DiffType.CELL_DIFFERENCE).collect(Collectors.toList());
+            if (!cellDiffs.isEmpty()) {
+                XWPFParagraph cellHeader = document.createParagraph();
+                XWPFRun cellRun = cellHeader.createRun();
+                cellRun.setBold(true);
+                cellRun.setText("Cell Differences:");
+                XWPFTable table = document.createTable(1, 4);
+                table.setWidth("100%");
+                XWPFTableRow headerRow = table.getRow(0);
+                headerRow.getCell(0).setText("Row");
+                headerRow.getCell(1).setText("Column Index");
+                headerRow.getCell(2).setText("Source 1 Value");
+                headerRow.getCell(3).setText("Source 2 Value");
 
-                  // Report Cell-level differences
-                  List<TableDifference> cellDiffs = diffs.stream()
-                      .filter(d -> d.getType() == TableDifference.DiffType.CELL_DIFFERENCE)
-                      .collect(Collectors.toList());
-
-                  if(!cellDiffs.isEmpty()){
-                      document.createParagraph().createRun().setText("Cell Differences:");
-                      XWPFTable table = document.createTable(1, 4);
-                      table.setWidth("100%");
-                      XWPFTableRow headerRow = table.getRow(0);
-                      headerRow.getCell(0).setText("Row");
-                      headerRow.getCell(1).setText("Column Index");
-                      headerRow.getCell(2).setText("Source 1 Value");
-                      headerRow.getCell(3).setText("Source 2 Value");
-
-                      for (TableDifference diff : cellDiffs) {
-                          XWPFTableRow row = table.createRow();
-                          row.getCell(0).setText(String.valueOf(diff.getRowIndex() + 1));
-                          row.getCell(1).setText(String.valueOf(diff.getColIndex() + 1));
-                          row.getCell(2).setText(diff.getValue1());
-                          row.getCell(3).setText(diff.getValue2());
-                      }
-                  }
-              });
+                for (TableDifference diff : cellDiffs) {
+                    XWPFTableRow row = table.createRow();
+                    row.getCell(0).setText(String.valueOf(diff.getRowIndex() + 1));
+                    row.getCell(1).setText(String.valueOf(diff.getColIndex() + 1));
+                    row.getCell(2).setText(diff.getValue1());
+                    row.getCell(3).setText(diff.getValue2());
+                }
+            }
+        }
     }
 
     private void createImageDiffs(XWPFDocument document, ComparisonReport report) {
-         document.createParagraph().createRun().addBreak();
+        document.createParagraph().createRun().addBreak();
         XWPFParagraph imageHeader = document.createParagraph();
         XWPFRun imageRun = imageHeader.createRun();
         imageRun.setBold(true);
