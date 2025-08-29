@@ -1,0 +1,4 @@
+ProductID,ProductName,Price,InStock
+101,Widget A,19.99,Yes
+102,Widget B,29.99,No
+103,Widget C,39.99,Yes

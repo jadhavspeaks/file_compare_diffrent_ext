@@ -32,8 +32,10 @@ public class ExcelReportGenerator {
 
     private CellStyle createStyle(Workbook workbook, IndexedColors color, boolean isBold) {
         CellStyle style = workbook.createCellStyle();
-        style.setFillForegroundColor(color.getIndex());
-        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        if (color != null) {
+            style.setFillForegroundColor(color.getIndex());
+            style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        }
         if(isBold) {
             Font font = workbook.createFont();
             font.setBold(true);
@@ -94,19 +96,25 @@ public class ExcelReportGenerator {
             int tableIndex1 = diffs.get(0).getTableIndex1();
             int tableIndex2 = diffs.get(0).getTableIndex2();
 
-            // Sub-header for the table pair
             Row subHeaderRow = sheet.createRow(rowNum++);
             Cell subHeaderCell = subHeaderRow.createCell(0);
             subHeaderCell.setCellValue(String.format("Comparison for Table %d (Source 1) vs Table %d (Source 2)", tableIndex1 + 1, tableIndex2 + 1));
             sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 5));
             subHeaderCell.setCellStyle(headerStyle);
-            rowNum++; // Add a blank row for spacing
 
             // Column differences
+            long addedCount = diffs.stream().filter(d -> d.getType() == TableDifference.DiffType.COLUMN_ADDED).count();
+            long deletedCount = diffs.stream().filter(d -> d.getType() == TableDifference.DiffType.COLUMN_DELETED).count();
+            if (addedCount > 0 || deletedCount > 0) {
+                 Row summaryRow = sheet.createRow(rowNum++);
+                 summaryRow.createCell(0).setCellValue(String.format("Column Summary: %d columns added, %d columns deleted.", addedCount, deletedCount));
+                 sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 5));
+            }
+
             for (TableDifference diff : diffs) {
                 if (diff.getType() == TableDifference.DiffType.COLUMN_ADDED || diff.getType() == TableDifference.DiffType.COLUMN_DELETED) {
                     Row row = sheet.createRow(rowNum++);
-                    String changeType = diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? "Column Added" : "Column Deleted";
+                    String changeType = diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? "Column Missing in Source 1" : "Column Missing in Source 2";
                     String colName = diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? diff.getValue2() : diff.getValue1();
                     row.createCell(0).setCellValue(changeType);
                     row.createCell(1).setCellValue(colName);
@@ -115,14 +123,16 @@ public class ExcelReportGenerator {
             }
 
             // Cell differences
-            Row cellHeaderRow = sheet.createRow(rowNum++);
-            cellHeaderRow.createCell(0).setCellValue("Row");
-            cellHeaderRow.createCell(1).setCellValue("Column Index");
-            cellHeaderRow.createCell(2).setCellValue("Source 1 Value");
-            cellHeaderRow.createCell(3).setCellValue("Source 2 Value");
+            List<TableDifference> cellDiffs = diffs.stream().filter(d -> d.getType() == TableDifference.DiffType.CELL_DIFFERENCE).collect(Collectors.toList());
+            if(!cellDiffs.isEmpty()) {
+                Row cellHeaderRow = sheet.createRow(rowNum++);
+                cellHeaderRow.createCell(0).setCellValue("Row");
+                cellHeaderRow.createCell(1).setCellValue("Column Index");
+                cellHeaderRow.createCell(2).setCellValue("Source 1 Value");
+                cellHeaderRow.createCell(3).setCellValue("Source 2 Value");
+                cellHeaderRow.setRowStyle(createStyle(workbook, null, true));
 
-            for(TableDifference diff : diffs) {
-                if(diff.getType() == TableDifference.DiffType.CELL_DIFFERENCE) {
+                for(TableDifference diff : cellDiffs) {
                     Row row = sheet.createRow(rowNum++);
                     row.createCell(0).setCellValue(diff.getRowIndex() + 1);
                     row.createCell(1).setCellValue(diff.getColIndex() + 1);
@@ -130,7 +140,7 @@ public class ExcelReportGenerator {
                     row.createCell(3).setCellValue(diff.getValue2());
                 }
             }
-            rowNum += 2; // Add extra blank rows for spacing
+            rowNum += 2;
         }
     }
 

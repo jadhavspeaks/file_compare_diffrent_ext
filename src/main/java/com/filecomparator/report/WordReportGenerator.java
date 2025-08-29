@@ -108,9 +108,12 @@ public class WordReportGenerator {
                       .collect(Collectors.toList());
 
                   if(!columnDiffs.isEmpty()){
-                      document.createParagraph().createRun().setText("Column Changes:");
+                      long added = columnDiffs.stream().filter(d -> d.getType() == TableDifference.DiffType.COLUMN_ADDED).count();
+                      long deleted = columnDiffs.stream().filter(d -> d.getType() == TableDifference.DiffType.COLUMN_DELETED).count();
+                      document.createParagraph().createRun().setText(String.format("Column Summary: %d columns added, %d columns deleted.", added, deleted));
+
                       for(TableDifference diff : columnDiffs){
-                          String changeType = diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? "Added" : "Deleted";
+                          String changeType = diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? "Column Missing in Source 1" : "Column Missing in Source 2";
                           String columnName = diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? diff.getValue2() : diff.getValue1();
                           document.createParagraph().createRun().setText(String.format("  - %s: '%s'", changeType, columnName));
                       }
