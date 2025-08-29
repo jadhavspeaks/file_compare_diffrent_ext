@@ -3,17 +3,16 @@ package com.filecomparator.ui;
 import com.filecomparator.model.ComparisonReport;
 import com.filecomparator.model.FileContent;
 import com.filecomparator.model.diff.TextDifference;
-import com.filecomparator.service.ParserFactory;
 import com.filecomparator.report.ExcelReportGenerator;
 import com.filecomparator.report.WordReportGenerator;
 import com.filecomparator.service.ComparatorService;
+import com.filecomparator.service.ParserUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -136,9 +135,9 @@ public class MainFrame extends JFrame {
             }
 
             publish(10);
-            FileContent content1 = ParserFactory.getParser(source1).orElseThrow(() -> new IOException("Unsupported type for source 1")).parse(source1);
+            FileContent content1 = ParserUtils.parseAndValidate(source1);
             publish(30);
-            FileContent content2 = ParserFactory.getParser(source2).orElseThrow(() -> new IOException("Unsupported type for source 2")).parse(source2);
+            FileContent content2 = ParserUtils.parseAndValidate(source2);
             publish(50);
             ComparatorService comparator = new ComparatorService();
             ComparisonReport report = comparator.compare(content1, content2);
@@ -163,7 +162,7 @@ public class MainFrame extends JFrame {
                 publish(100);
                 return report;
             }
-            return null; // User cancelled save
+            return null;
         }
 
         @Override

@@ -97,4 +97,37 @@ public class TableComparatorTest {
         csv1.delete();
         csv2.delete();
     }
+
+    @Test
+    void testPipeDelimitedFile() throws IOException {
+        File psvFile = new File("test.psv");
+        try (FileWriter writer = new FileWriter(psvFile)) {
+            writer.write("ID|Name|Value\n1|Pipe|100");
+        }
+
+        CsvParser csvParser = new CsvParser();
+        FileContent content = csvParser.parse(psvFile.getPath());
+
+        assertFalse(content.getTables().isEmpty());
+        assertEquals(2, content.getTables().get(0).size()); // Header + 1 data row
+        assertEquals("Pipe", content.getTables().get(0).get(1).get(1));
+
+        psvFile.delete();
+    }
+
+    @Test
+    void testEmptyTableValidationError() throws IOException {
+        File emptyCsv = new File("empty.csv");
+        try (FileWriter writer = new FileWriter(emptyCsv)) {
+            writer.write(""); // Empty file
+        }
+
+        IOException exception = assertThrows(IOException.class, () -> {
+            com.filecomparator.service.ParserUtils.parseAndValidate(emptyCsv.getPath());
+        });
+
+        assertTrue(exception.getMessage().contains("No meaningful table data was found"));
+
+        emptyCsv.delete();
+    }
 }

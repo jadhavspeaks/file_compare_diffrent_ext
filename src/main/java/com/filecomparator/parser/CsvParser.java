@@ -25,7 +25,8 @@ public class CsvParser implements FileParser {
 
     @Override
     public boolean canParse(String input) {
-        return input.toLowerCase().endsWith(".csv");
+        String lower = input.toLowerCase();
+        return lower.endsWith(".csv") || lower.endsWith(".tsv") || lower.endsWith(".psv");
     }
 
     @Override
@@ -33,19 +34,15 @@ public class CsvParser implements FileParser {
         logger.info("Parsing CSV file: {}", input);
         FileContent fileContent = new FileContent();
 
-        // Only extract table data, not raw text, to avoid redundant comparisons.
         try (Reader reader = new FileReader(input)) {
             char delimiter = detectDelimiter(input);
-            // Use withFirstRecordAsHeader() to correctly handle the header row
             CSVFormat csvFormat = CSVFormat.DEFAULT.withDelimiter(delimiter).withFirstRecordAsHeader();
             CSVParser csvParser = new CSVParser(reader, csvFormat);
 
-            // Add header to the table data
             List<String> header = csvParser.getHeaderNames();
             List<List<String>> tableData = new ArrayList<>();
             tableData.add(header);
 
-            // Add records
             for (CSVRecord record : csvParser) {
                 tableData.add(record.toList());
             }
@@ -62,7 +59,7 @@ public class CsvParser implements FileParser {
         Map<Character, Integer> delimiterCounts = new HashMap<>();
 
         try (BufferedReader reader = new BufferedReader(new FileReader(input))) {
-            String line = reader.readLine(); // Only check the first line (usually the header)
+            String line = reader.readLine();
             if (line != null) {
                 for (char delim : delimiters) {
                     int count = (int) line.chars().filter(c -> c == delim).count();
@@ -74,7 +71,7 @@ public class CsvParser implements FileParser {
         }
 
         if (delimiterCounts.isEmpty()) {
-            return ','; // Default
+            return ',';
         }
 
         return Collections.max(delimiterCounts.entrySet(), Map.Entry.comparingByValue()).getKey();
