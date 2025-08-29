@@ -12,66 +12,55 @@ import javax.imageio.ImageIO;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class ExcelReportGenerator {
 
     public void generateReport(ComparisonReport report, String outputPath) throws IOException {
         try (Workbook workbook = new XSSFWorkbook()) {
-            // Create styles
-            CellStyle greenStyle = createStyle(workbook, IndexedColors.LIGHT_GREEN);
-            CellStyle redStyle = createStyle(workbook, IndexedColors.ROSE);
-
-            // Summary Sheet
             createSummarySheet(workbook, report);
+            if (!report.getTextDifferences().isEmpty()) createTextDiffSheet(workbook, report);
+            if (!report.getTableDifferences().isEmpty()) createTableDiffSheet(workbook, report);
+            if (!report.getImageDifferences().isEmpty()) createImageDiffSheet(workbook, report);
 
-            // Text Differences Sheet
-            createTextDiffSheet(workbook, report, greenStyle, redStyle);
-
-            // Table Differences Sheet
-            createTableDiffSheet(workbook, report);
-
-            // Image Differences Sheet
-            createImageDiffSheet(workbook, report);
-
-
-            // Write the output to a file
             try (FileOutputStream fileOut = new FileOutputStream(outputPath)) {
                 workbook.write(fileOut);
             }
         }
     }
 
-    private CellStyle createStyle(Workbook workbook, IndexedColors color) {
+    private CellStyle createStyle(Workbook workbook, IndexedColors color, boolean isBold) {
         CellStyle style = workbook.createCellStyle();
         style.setFillForegroundColor(color.getIndex());
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        if(isBold) {
+            Font font = workbook.createFont();
+            font.setBold(true);
+            style.setFont(font);
+        }
         return style;
     }
 
     private void createSummarySheet(Workbook workbook, ComparisonReport report) {
         Sheet summarySheet = workbook.createSheet("Summary");
         summarySheet.createRow(0).createCell(0).setCellValue("Comparison Summary");
-
         long inserts = report.getTextDifferences().stream().filter(d -> d.getType() == TextDifference.DiffType.INSERT).count();
         long deletes = report.getTextDifferences().stream().filter(d -> d.getType() == TextDifference.DiffType.DELETE).count();
         long changes = report.getTextDifferences().stream().filter(d -> d.getType() == TextDifference.DiffType.CHANGE).count();
 
-        String textSummary = String.format("Found %d text differences (%d additions, %d deletions, %d changes). See 'Text Differences' sheet.",
-                report.getTextDifferences().size(), inserts, deletes, changes);
-
-        String tableSummary = String.format("Found %d table cell differences. See 'Table Differences' sheet.",
-                report.getTableDifferences().size());
-
-        String imageSummary = String.format("Found %d image differences. See 'Image Differences' sheet.",
-                report.getImageDifferences().size());
-
-        summarySheet.createRow(1).createCell(0).setCellValue(textSummary);
-        summarySheet.createRow(2).createCell(0).setCellValue(tableSummary);
-        summarySheet.createRow(3).createCell(0).setCellValue(imageSummary);
+        summarySheet.createRow(1).createCell(0).setCellValue(String.format("Found %d text differences (%d additions, %d deletions, %d changes). See 'Text Differences' sheet.",
+                report.getTextDifferences().size(), inserts, deletes, changes));
+        summarySheet.createRow(2).createCell(0).setCellValue(String.format("Found %d table differences. See 'Table Differences' sheet.",
+                report.getTableDifferences().size()));
+        summarySheet.createRow(3).createCell(0).setCellValue(String.format("Found %d image differences. See 'Image Differences' sheet.",
+                report.getImageDifferences().size()));
     }
 
-    private void createTextDiffSheet(Workbook workbook, ComparisonReport report, CellStyle green, CellStyle red) {
+    private void createTextDiffSheet(Workbook workbook, ComparisonReport report) {
         Sheet textDiffSheet = workbook.createSheet("Text Differences");
+        CellStyle green = createStyle(workbook, IndexedColors.LIGHT_GREEN, false);
+        CellStyle red = createStyle(workbook, IndexedColors.ROSE, false);
         Row headerRow = textDiffSheet.createRow(0);
         headerRow.createCell(0).setCellValue("Source 1");
         headerRow.createCell(1).setCellValue("Source 2");
@@ -82,17 +71,11 @@ public class ExcelReportGenerator {
             Cell cell2 = row.createCell(1);
             cell1.setCellValue(truncate(diff.getText1()));
             cell2.setCellValue(truncate(diff.getText2()));
-            switch (diff.getType()) {
-                case INSERT:
-                    cell2.setCellStyle(green);
-                    break;
-                case DELETE:
-                    cell1.setCellStyle(red);
-                    break;
-                case CHANGE:
-                    cell1.setCellStyle(red);
-                    cell2.setCellStyle(green);
-                    break;
+            if (diff.getType() == TextDifference.DiffType.INSERT) cell2.setCellStyle(green);
+            if (diff.getType() == TextDifference.DiffType.DELETE) cell1.setCellStyle(red);
+            if (diff.getType() == TextDifference.DiffType.CHANGE) {
+                cell1.setCellStyle(red);
+                cell2.setCellStyle(green);
             }
         }
         textDiffSheet.autoSizeColumn(0);
@@ -100,34 +83,54 @@ public class ExcelReportGenerator {
     }
 
     private void createTableDiffSheet(Workbook workbook, ComparisonReport report) {
-        Sheet tableDiffSheet = workbook.createSheet("Table Differences");
-        Row headerRow = tableDiffSheet.createRow(0);
-        headerRow.createCell(0).setCellValue("Table 1 Index");
-        headerRow.createCell(1).setCellValue("Table 2 Index");
-        headerRow.createCell(2).setCellValue("Row");
-        headerRow.createCell(3).setCellValue("Column");
-        headerRow.createCell(4).setCellValue("Source 1 Value");
-        headerRow.createCell(5).setCellValue("Source 2 Value");
-        int rowNum = 1;
-        for (TableDifference diff : report.getTableDifferences()) {
-            Row row = tableDiffSheet.createRow(rowNum++);
-            if (diff.getRowIndex() < 0) { // This is a summary row
-                Cell summaryCell = row.createCell(0);
-                summaryCell.setCellValue(String.format("Summary for Matched Tables (%d vs %d): %s", diff.getTableIndex1() + 1, diff.getTableIndex2() + 1, diff.getCell2()));
-                tableDiffSheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 5));
-                Font boldFont = workbook.createFont();
-                boldFont.setBold(true);
-                CellStyle boldStyle = workbook.createCellStyle();
-                boldStyle.setFont(boldFont);
-                summaryCell.setCellStyle(boldStyle);
-            } else {
-                row.createCell(0).setCellValue(diff.getTableIndex1() >= 0 ? String.valueOf(diff.getTableIndex1() + 1) : "N/A");
-                row.createCell(1).setCellValue(diff.getTableIndex2() >= 0 ? String.valueOf(diff.getTableIndex2() + 1) : "N/A");
-                row.createCell(2).setCellValue(diff.getRowIndex() >= 0 ? String.valueOf(diff.getRowIndex() + 1) : "N/A");
-                row.createCell(3).setCellValue(diff.getColIndex() >= 0 ? String.valueOf(diff.getColIndex() + 1) : "N/A");
-                row.createCell(4).setCellValue(diff.getCell1());
-                row.createCell(5).setCellValue(diff.getCell2());
+        Sheet sheet = workbook.createSheet("Table Differences");
+        int rowNum = 0;
+
+        CellStyle addedStyle = createStyle(workbook, IndexedColors.LIGHT_GREEN, false);
+        CellStyle deletedStyle = createStyle(workbook, IndexedColors.ROSE, false);
+        CellStyle headerStyle = createStyle(workbook, IndexedColors.GREY_25_PERCENT, true);
+
+        for (List<TableDifference> diffs : report.getTableDifferences().stream().collect(Collectors.groupingBy(d -> d.getTableIndex1() + ":" + d.getTableIndex2())).values()) {
+            int tableIndex1 = diffs.get(0).getTableIndex1();
+            int tableIndex2 = diffs.get(0).getTableIndex2();
+
+            // Sub-header for the table pair
+            Row subHeaderRow = sheet.createRow(rowNum++);
+            Cell subHeaderCell = subHeaderRow.createCell(0);
+            subHeaderCell.setCellValue(String.format("Comparison for Table %d (Source 1) vs Table %d (Source 2)", tableIndex1 + 1, tableIndex2 + 1));
+            sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 5));
+            subHeaderCell.setCellStyle(headerStyle);
+            rowNum++; // Add a blank row for spacing
+
+            // Column differences
+            for (TableDifference diff : diffs) {
+                if (diff.getType() == TableDifference.DiffType.COLUMN_ADDED || diff.getType() == TableDifference.DiffType.COLUMN_DELETED) {
+                    Row row = sheet.createRow(rowNum++);
+                    String changeType = diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? "Column Added" : "Column Deleted";
+                    String colName = diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? diff.getValue2() : diff.getValue1();
+                    row.createCell(0).setCellValue(changeType);
+                    row.createCell(1).setCellValue(colName);
+                    row.getCell(0).setCellStyle(diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? addedStyle : deletedStyle);
+                }
             }
+
+            // Cell differences
+            Row cellHeaderRow = sheet.createRow(rowNum++);
+            cellHeaderRow.createCell(0).setCellValue("Row");
+            cellHeaderRow.createCell(1).setCellValue("Column Index");
+            cellHeaderRow.createCell(2).setCellValue("Source 1 Value");
+            cellHeaderRow.createCell(3).setCellValue("Source 2 Value");
+
+            for(TableDifference diff : diffs) {
+                if(diff.getType() == TableDifference.DiffType.CELL_DIFFERENCE) {
+                    Row row = sheet.createRow(rowNum++);
+                    row.createCell(0).setCellValue(diff.getRowIndex() + 1);
+                    row.createCell(1).setCellValue(diff.getColIndex() + 1);
+                    row.createCell(2).setCellValue(diff.getValue1());
+                    row.createCell(3).setCellValue(diff.getValue2());
+                }
+            }
+            rowNum += 2; // Add extra blank rows for spacing
         }
     }
 
@@ -139,7 +142,6 @@ public class ExcelReportGenerator {
 
         for (ImageDifference diff : report.getImageDifferences()) {
             try {
-                // Description row
                 String description = diff.getDescription();
                 if (diff.getSimilarityScore() > 0) {
                     description = String.format("Similarity: %.1f%%. %s", diff.getSimilarityScore() * 100, diff.getDescription());
@@ -148,46 +150,37 @@ public class ExcelReportGenerator {
                 descRow.createCell(0).setCellValue("Image Difference: " + description);
                 sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 9));
 
-                // Image row
                 Row imageRow = sheet.createRow(rowNum);
                 imageRow.setHeightInPoints(200);
 
                 if (diff.getImage1() != null) {
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    ImageIO.write(diff.getImage1(), "png", baos);
-                    int pictureIdx = workbook.addPicture(baos.toByteArray(), Workbook.PICTURE_TYPE_PNG);
-                    ClientAnchor anchor = helper.createClientAnchor();
-                    anchor.setCol1(0);
-                    anchor.setRow1(rowNum);
-                    anchor.setCol2(4);
-                    anchor.setRow2(rowNum + 1);
-                    drawing.createPicture(anchor, pictureIdx);
+                    addPictureToSheet(workbook, drawing, helper, diff.getImage1(), 0, rowNum);
                 }
-
                 if (diff.getImage2() != null) {
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    ImageIO.write(diff.getImage2(), "png", baos);
-                    int pictureIdx = workbook.addPicture(baos.toByteArray(), Workbook.PICTURE_TYPE_PNG);
-                    ClientAnchor anchor = helper.createClientAnchor();
-                    anchor.setCol1(5);
-                    anchor.setRow1(rowNum);
-                    anchor.setCol2(9);
-                    anchor.setRow2(rowNum + 1);
-                    drawing.createPicture(anchor, pictureIdx);
+                    addPictureToSheet(workbook, drawing, helper, diff.getImage2(), 5, rowNum);
                 }
-
                 rowNum += 12;
             } catch (Exception e) {
-                Row errorRow = sheet.createRow(rowNum++);
-                errorRow.createCell(0).setCellValue("Error embedding image: " + e.getMessage());
+                sheet.createRow(rowNum++).createCell(0).setCellValue("Error embedding image: " + e.getMessage());
             }
         }
     }
 
+    private void addPictureToSheet(Workbook wb, Drawing<?> drawing, CreationHelper helper, java.awt.image.BufferedImage img, int col, int row) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(img, "png", baos);
+        int pictureIdx = wb.addPicture(baos.toByteArray(), Workbook.PICTURE_TYPE_PNG);
+        ClientAnchor anchor = helper.createClientAnchor();
+        anchor.setCol1(col);
+        anchor.setRow1(row);
+        anchor.setCol2(col + 4);
+        anchor.setRow2(row + 1);
+        drawing.createPicture(anchor, pictureIdx);
+    }
+
     private String truncate(String text) {
-        int MAX_LENGTH = 32767;
-        if (text != null && text.length() > MAX_LENGTH) {
-            return text.substring(0, MAX_LENGTH - 15) + " [...truncated]";
+        if (text != null && text.length() > 32767) {
+            return text.substring(0, 32752) + " [...truncated]";
         }
         return text;
     }

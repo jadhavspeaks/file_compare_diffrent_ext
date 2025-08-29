@@ -12,30 +12,18 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class WordReportGenerator {
 
     public void generateReport(ComparisonReport report, String outputPath) throws IOException {
         try (XWPFDocument document = new XWPFDocument()) {
-            // Summary
             createSummary(document, report);
+            if (!report.getTextDifferences().isEmpty()) createTextDiffs(document, report);
+            if (!report.getTableDifferences().isEmpty()) createTableDiffs(document, report);
+            if (!report.getImageDifferences().isEmpty()) createImageDiffs(document, report);
 
-            // Text Differences
-            if (!report.getTextDifferences().isEmpty()) {
-                createTextDiffs(document, report);
-            }
-
-            // Table Differences
-            if (!report.getTableDifferences().isEmpty()) {
-                createTableDiffs(document, report);
-            }
-
-            // Image Differences
-            if (!report.getImageDifferences().isEmpty()) {
-                createImageDiffs(document, report);
-            }
-
-            // Write the output to a file
             try (FileOutputStream fileOut = new FileOutputStream(outputPath)) {
                 document.write(fileOut);
             }
@@ -53,18 +41,12 @@ public class WordReportGenerator {
         long deletes = report.getTextDifferences().stream().filter(d -> d.getType() == TextDifference.DiffType.DELETE).count();
         long changes = report.getTextDifferences().stream().filter(d -> d.getType() == TextDifference.DiffType.CHANGE).count();
 
-        String textSummary = String.format("Found %d text differences (%d additions, %d deletions, %d changes).",
-                report.getTextDifferences().size(), inserts, deletes, changes);
-
-        String tableSummary = String.format("Found %d table cell differences.",
-                report.getTableDifferences().size());
-
-        String imageSummary = String.format("Found %d image differences.",
-                report.getImageDifferences().size());
-
-        document.createParagraph().createRun().setText(textSummary);
-        document.createParagraph().createRun().setText(tableSummary);
-        document.createParagraph().createRun().setText(imageSummary);
+        document.createParagraph().createRun().setText(String.format("Found %d text differences (%d additions, %d deletions, %d changes).",
+                report.getTextDifferences().size(), inserts, deletes, changes));
+        document.createParagraph().createRun().setText(String.format("Found %d table differences.",
+                report.getTableDifferences().size()));
+        document.createParagraph().createRun().setText(String.format("Found %d image differences.",
+                report.getImageDifferences().size()));
     }
 
     private void createTextDiffs(XWPFDocument document, ComparisonReport report) {
@@ -75,15 +57,13 @@ public class WordReportGenerator {
         textRun.setFontSize(14);
         textRun.setText("Text Differences");
 
-        XWPFTable table = document.createTable(report.getTextDifferences().size() + 1, 2);
+        XWPFTable table = document.createTable(1, 2);
         table.setWidth("100%");
-        // Header
         table.getRow(0).getCell(0).setText("Source 1");
         table.getRow(0).getCell(1).setText("Source 2");
 
-        int rowNum = 1;
         for (TextDifference diff : report.getTextDifferences()) {
-            XWPFTableRow row = table.getRow(rowNum++);
+            XWPFTableRow row = table.createRow();
             row.getCell(0).setText(diff.getText1());
             row.getCell(1).setText(diff.getText2());
             switch (diff.getType()) {
@@ -94,8 +74,8 @@ public class WordReportGenerator {
                     row.getCell(0).setColor("F0C7C7"); // Light Red
                     break;
                 case CHANGE:
-                    row.getCell(0).setColor("F0C7C7"); // Light Red
-                    row.getCell(1).setColor("C7F0C7"); // Light Green
+                    row.getCell(0).setColor("F0C7C7");
+                    row.getCell(1).setColor("C7F0C7");
                     break;
             }
         }
@@ -103,41 +83,63 @@ public class WordReportGenerator {
 
     private void createTableDiffs(XWPFDocument document, ComparisonReport report) {
         document.createParagraph().createRun().addBreak();
-        XWPFParagraph tableHeader = document.createParagraph();
-        XWPFRun tableRun = tableHeader.createRun();
-        tableRun.setBold(true);
-        tableRun.setFontSize(14);
-        tableRun.setText("Table Differences");
+        XWPFParagraph mainHeader = document.createParagraph();
+        XWPFRun mainRun = mainHeader.createRun();
+        mainRun.setBold(true);
+        mainRun.setFontSize(14);
+        mainRun.setText("Table Differences");
 
-        XWPFTable table = document.createTable(report.getTableDifferences().size() + 1, 6);
-        table.setWidth("100%");
-        // Header
-        XWPFTableRow headerRow = table.getRow(0);
-        headerRow.getCell(0).setText("Table 1 Index");
-        headerRow.getCell(1).setText("Table 2 Index");
-        headerRow.getCell(2).setText("Row");
-        headerRow.getCell(3).setText("Column");
-        headerRow.getCell(4).setText("Source 1 Value");
-        headerRow.getCell(5).setText("Source 2 Value");
+        report.getTableDifferences().stream()
+              .collect(Collectors.groupingBy(d -> d.getTableIndex1() + ":" + d.getTableIndex2()))
+              .forEach((key, diffs) -> {
+                  int tableIndex1 = diffs.get(0).getTableIndex1();
+                  int tableIndex2 = diffs.get(0).getTableIndex2();
 
-        for (TableDifference diff : report.getTableDifferences()) {
-            if (diff.getRowIndex() < 0) { // This is a summary row
-                // Add a formatted paragraph for the summary
-                XWPFParagraph summaryP = document.createParagraph();
-                summaryP.setSpacingBefore(200);
-                XWPFRun summaryRun = summaryP.createRun();
-                summaryRun.setBold(true);
-                summaryRun.setText(String.format("Summary for Matched Tables (%d vs %d): %s", diff.getTableIndex1() + 1, diff.getTableIndex2() + 1, diff.getCell2()));
-            } else {
-                 XWPFTableRow row = table.createRow();
-                 row.getCell(0).setText(diff.getTableIndex1() >= 0 ? String.valueOf(diff.getTableIndex1() + 1) : "N/A");
-                 row.getCell(1).setText(diff.getTableIndex2() >= 0 ? String.valueOf(diff.getTableIndex2() + 1) : "N/A");
-                 row.getCell(2).setText(diff.getRowIndex() >= 0 ? String.valueOf(diff.getRowIndex() + 1) : "N/A");
-                 row.getCell(3).setText(diff.getColIndex() >= 0 ? String.valueOf(diff.getColIndex() + 1) : "N/A");
-                 row.getCell(4).setText(diff.getCell1());
-                 row.getCell(5).setText(diff.getCell2());
-            }
-        }
+                  XWPFParagraph subHeader = document.createParagraph();
+                  subHeader.setSpacingBefore(200);
+                  XWPFRun subRun = subHeader.createRun();
+                  subRun.setBold(true);
+                  subRun.setItalic(true);
+                  subRun.setText(String.format("Comparison for Table %d (Source 1) vs Table %d (Source 2)", tableIndex1 + 1, tableIndex2 + 1));
+
+                  // Report Column-level differences
+                  List<TableDifference> columnDiffs = diffs.stream()
+                      .filter(d -> d.getType() == TableDifference.DiffType.COLUMN_ADDED || d.getType() == TableDifference.DiffType.COLUMN_DELETED)
+                      .collect(Collectors.toList());
+
+                  if(!columnDiffs.isEmpty()){
+                      document.createParagraph().createRun().setText("Column Changes:");
+                      for(TableDifference diff : columnDiffs){
+                          String changeType = diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? "Added" : "Deleted";
+                          String columnName = diff.getType() == TableDifference.DiffType.COLUMN_ADDED ? diff.getValue2() : diff.getValue1();
+                          document.createParagraph().createRun().setText(String.format("  - %s: '%s'", changeType, columnName));
+                      }
+                  }
+
+                  // Report Cell-level differences
+                  List<TableDifference> cellDiffs = diffs.stream()
+                      .filter(d -> d.getType() == TableDifference.DiffType.CELL_DIFFERENCE)
+                      .collect(Collectors.toList());
+
+                  if(!cellDiffs.isEmpty()){
+                      document.createParagraph().createRun().setText("Cell Differences:");
+                      XWPFTable table = document.createTable(1, 4);
+                      table.setWidth("100%");
+                      XWPFTableRow headerRow = table.getRow(0);
+                      headerRow.getCell(0).setText("Row");
+                      headerRow.getCell(1).setText("Column Index");
+                      headerRow.getCell(2).setText("Source 1 Value");
+                      headerRow.getCell(3).setText("Source 2 Value");
+
+                      for (TableDifference diff : cellDiffs) {
+                          XWPFTableRow row = table.createRow();
+                          row.getCell(0).setText(String.valueOf(diff.getRowIndex() + 1));
+                          row.getCell(1).setText(String.valueOf(diff.getColIndex() + 1));
+                          row.getCell(2).setText(diff.getValue1());
+                          row.getCell(3).setText(diff.getValue2());
+                      }
+                  }
+              });
     }
 
     private void createImageDiffs(XWPFDocument document, ComparisonReport report) {
