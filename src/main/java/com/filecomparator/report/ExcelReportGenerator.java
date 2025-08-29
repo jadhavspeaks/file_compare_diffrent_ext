@@ -110,8 +110,11 @@ public class ExcelReportGenerator {
             List<TableDifference> columnDiffs = diffs.stream().filter(d -> d.getType() != TableDifference.DiffType.CELL_DIFFERENCE).collect(Collectors.toList());
             if (!columnDiffs.isEmpty()) {
                 Row columnHeader = sheet.createRow(rowNum++);
-                columnHeader.createCell(0).setCellValue("Column Changes");
-                columnHeader.getCell(0).setCellStyle(headerStyle);
+                Cell columnHeaderCell = columnHeader.createCell(0);
+                columnHeaderCell.setCellValue("Column Changes");
+                columnHeaderCell.setCellStyle(headerStyle);
+                sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 1));
+
                 for (TableDifference diff : columnDiffs) {
                     Row row = sheet.createRow(rowNum++);
                     String changeType;
@@ -138,12 +141,14 @@ public class ExcelReportGenerator {
 
             List<TableDifference> cellDiffs = diffs.stream().filter(d -> d.getType() == TableDifference.DiffType.CELL_DIFFERENCE).collect(Collectors.toList());
             if (!cellDiffs.isEmpty()) {
+                rowNum++; // Blank row for spacing
                 Row cellHeaderRow = sheet.createRow(rowNum++);
-                cellHeaderRow.createCell(0).setCellValue("Row");
-                cellHeaderRow.createCell(1).setCellValue("Column Index");
-                cellHeaderRow.createCell(2).setCellValue("Source 1 Value");
-                cellHeaderRow.createCell(3).setCellValue("Source 2 Value");
-                cellHeaderRow.setRowStyle(headerStyle);
+                String[] headers = {"Row", "Column Index", "Source 1 Value", "Source 2 Value"};
+                for(int i=0; i<headers.length; i++){
+                    Cell cell = cellHeaderRow.createCell(i);
+                    cell.setCellValue(headers[i]);
+                    cell.setCellStyle(headerStyle);
+                }
 
                 for(TableDifference diff : cellDiffs) {
                     Row row = sheet.createRow(rowNum++);
