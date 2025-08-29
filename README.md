@@ -26,7 +26,7 @@ The tool can compare content from any combination of the following sources, maki
 - **Automatic Delimiter Detection**: The CSV/TSV parser automatically detects the most likely delimiter from a set of common characters.
 
 ### 2.3. Advanced Comparison Engine
-- **Intelligent Table Matching**: The engine uses the **Jaro-Winkler string similarity algorithm** on table headers to intelligently match tables between the two sources.
+- **Intelligent Table Matching**: The engine uses a two-stage process for robust table comparison. First, it uses **Jaccard similarity** on the set of column headers to find the best matching tables, even if columns have been added, removed, or reordered. Second, within matched tables, it performs a detailed comparison, reporting on **added/deleted columns** before showing a cell-by-cell diff of the matched columns.
 - **Context-Aware Text Comparison**: Automatically switches between a **line-by-line** and a **paragraph-by-paragraph** comparison for more intuitive results.
 - **Perceptual Image Comparison**: Instead of a simple hash check, the tool now uses a **dHash (Difference Hash)** algorithm to compare images. This allows it to detect images that are **visually similar**, not just identical, and provides a similarity score in the final report.
 
