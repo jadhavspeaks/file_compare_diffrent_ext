@@ -1,6 +1,7 @@
 package com.filecomparator.report;
 
 import com.filecomparator.model.ComparisonReport;
+import com.filecomparator.model.FileContent;
 import com.filecomparator.model.diff.ImageDifference;
 import com.filecomparator.model.diff.TableDifference;
 import com.filecomparator.model.diff.TextDifference;
@@ -12,6 +13,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -51,9 +53,9 @@ public class WordReportGenerator {
     }
 
     private void createTextDiffs(XWPFDocument document, ComparisonReport report) {
-        document.createParagraph().createRun().addBreak();
-        XWPFParagraph textHeader = document.createParagraph();
-        XWPFRun textRun = textHeader.createRun();
+        XWPFParagraph p = document.createParagraph();
+        p.createRun().addBreak();
+        XWPFRun textRun = p.createRun();
         textRun.setBold(true);
         textRun.setFontSize(14);
         textRun.setText("Text Differences");
@@ -78,9 +80,18 @@ public class WordReportGenerator {
         }
     }
 
+    private List<String> findHeader(List<List<String>> table) {
+        for (List<String> row : table) {
+            if (row != null && !row.stream().allMatch(String::isEmpty)) {
+                return row;
+            }
+        }
+        return new ArrayList<>();
+    }
+
     private void createTableDiffs(XWPFDocument document, ComparisonReport report) {
-        document.createParagraph().createRun().addBreak();
         XWPFParagraph mainHeader = document.createParagraph();
+        mainHeader.createRun().addBreak();
         XWPFRun mainRun = mainHeader.createRun();
         mainRun.setBold(true);
         mainRun.setFontSize(14);
@@ -99,7 +110,16 @@ public class WordReportGenerator {
             XWPFRun subRun = subHeader.createRun();
             subRun.setBold(true);
             subRun.setItalic(true);
-            subRun.setText(String.format("Comparison for Table %d (Source 1) vs Table %d (Source 2)", tableIndex1 + 1, tableIndex2 + 1));
+
+            if(tableIndex1 < 0 || tableIndex2 < 0) {
+                 subRun.setText("Unmatched Table Details");
+            } else {
+                 subRun.setText(String.format("Comparison for Table %d (Source 1) vs Table %d (Source 2)", tableIndex1 + 1, tableIndex2 + 1));
+                 List<String> header1 = findHeader(report.getContent1().getTables().get(tableIndex1));
+                 List<String> header2 = findHeader(report.getContent2().getTables().get(tableIndex2));
+                 XWPFRun countRun = document.createParagraph().createRun();
+                 countRun.setText(String.format("Column Count: %d (Source 1) vs %d (Source 2)", header1.size(), header2.size()));
+            }
 
             List<TableDifference> columnDiffs = diffs.stream().filter(d -> d.getType() != TableDifference.DiffType.CELL_DIFFERENCE).collect(Collectors.toList());
             if (!columnDiffs.isEmpty()) {
@@ -148,9 +168,9 @@ public class WordReportGenerator {
     }
 
     private void createImageDiffs(XWPFDocument document, ComparisonReport report) {
-        document.createParagraph().createRun().addBreak();
-        XWPFParagraph imageHeader = document.createParagraph();
-        XWPFRun imageRun = imageHeader.createRun();
+        XWPFParagraph p = document.createParagraph();
+        p.createRun().addBreak();
+        XWPFRun imageRun = p.createRun();
         imageRun.setBold(true);
         imageRun.setFontSize(14);
         imageRun.setText("Image Differences");

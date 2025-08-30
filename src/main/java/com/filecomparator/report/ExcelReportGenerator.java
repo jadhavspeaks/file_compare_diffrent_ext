@@ -12,6 +12,7 @@ import javax.imageio.ImageIO;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -85,6 +86,15 @@ public class ExcelReportGenerator {
         textDiffSheet.autoSizeColumn(1);
     }
 
+    private List<String> findHeader(List<List<String>> table) {
+        for (List<String> row : table) {
+            if (row != null && !row.stream().allMatch(String::isEmpty)) {
+                return row;
+            }
+        }
+        return new ArrayList<>();
+    }
+
     private void createTableDiffSheet(Workbook workbook, ComparisonReport report) {
         Sheet sheet = workbook.createSheet("Table Differences");
         int rowNum = 0;
@@ -103,9 +113,21 @@ public class ExcelReportGenerator {
 
             Row subHeaderRow = sheet.createRow(rowNum++);
             Cell subHeaderCell = subHeaderRow.createCell(0);
-            subHeaderCell.setCellValue(String.format("Comparison for Table %d (Source 1) vs Table %d (Source 2)", tableIndex1 + 1, tableIndex2 + 1));
+            if(tableIndex1 < 0 || tableIndex2 < 0) {
+                 subHeaderCell.setCellValue("Unmatched Table Details");
+            } else {
+                 subHeaderCell.setCellValue(String.format("Comparison for Table %d (Source 1) vs Table %d (Source 2)", tableIndex1 + 1, tableIndex2 + 1));
+            }
             sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 5));
             subHeaderCell.setCellStyle(headerStyle);
+
+            if(tableIndex1 >= 0 && tableIndex2 >= 0) {
+                List<String> header1 = findHeader(report.getContent1().getTables().get(tableIndex1));
+                List<String> header2 = findHeader(report.getContent2().getTables().get(tableIndex2));
+                Row countRow = sheet.createRow(rowNum++);
+                countRow.createCell(0).setCellValue(String.format("Column Count: %d (Source 1) vs %d (Source 2)", header1.size(), header2.size()));
+                sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 5));
+            }
 
             List<TableDifference> columnDiffs = diffs.stream().filter(d -> d.getType() != TableDifference.DiffType.CELL_DIFFERENCE).collect(Collectors.toList());
             if (!columnDiffs.isEmpty()) {
@@ -141,7 +163,7 @@ public class ExcelReportGenerator {
 
             List<TableDifference> cellDiffs = diffs.stream().filter(d -> d.getType() == TableDifference.DiffType.CELL_DIFFERENCE).collect(Collectors.toList());
             if (!cellDiffs.isEmpty()) {
-                rowNum++; // Blank row for spacing
+                rowNum++;
                 Row cellHeaderRow = sheet.createRow(rowNum++);
                 String[] headers = {"Row", "Column Index", "Source 1 Value", "Source 2 Value"};
                 for(int i=0; i<headers.length; i++){

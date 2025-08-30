@@ -8,10 +8,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ComparisonReport {
+    private FileContent content1;
+    private FileContent content2;
     private String summary;
     private final List<TextDifference> textDifferences = new ArrayList<>();
     private final List<TableDifference> tableDifferences = new ArrayList<>();
     private final List<ImageDifference> imageDifferences = new ArrayList<>();
+
+    public ComparisonReport(FileContent content1, FileContent content2) {
+        this.content1 = content1;
+        this.content2 = content2;
+    }
+
+    public FileContent getContent1() { return content1; }
+    public FileContent getContent2() { return content2; }
 
     public String getSummary() {
         return summary;

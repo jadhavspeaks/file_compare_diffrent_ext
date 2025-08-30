@@ -26,7 +26,7 @@ public class ComparatorService {
     private static final double TABLE_SIMILARITY_THRESHOLD = 0.5;
 
     public ComparisonReport compare(FileContent content1, FileContent content2) {
-        ComparisonReport report = new ComparisonReport();
+        ComparisonReport report = new ComparisonReport(content1, content2);
         compareText(content1.getText(), content2.getText(), report);
         compareTables(content1.getTables(), content2.getTables(), report);
         compareImages(content1.getImages(), content2.getImages(), report);
