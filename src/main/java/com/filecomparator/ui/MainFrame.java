@@ -28,7 +28,7 @@ public class MainFrame extends JFrame {
     private JButton compareButton;
     private JProgressBar progressBar;
     private JTextArea resultTextArea;
-
+    String basePath ="";
     private final String[] supportedTypes = {"URL", "PDF", "DOCX", "XLSX", "XLS", "PPTX", "CSV", "TXT", "JPEG", "PNG"};
 
     public MainFrame() {
@@ -149,7 +149,7 @@ public class MainFrame extends JFrame {
 
             if (fileChooser.showSaveDialog(MainFrame.this) == JFileChooser.APPROVE_OPTION) {
                 File outputFolder = fileChooser.getSelectedFile();
-                String basePath = outputFolder.getAbsolutePath();
+                basePath = outputFolder.getAbsolutePath();
                 String type1 = (String) type1ComboBox.getSelectedItem();
                 String type2 = (String) type2ComboBox.getSelectedItem();
                 String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
@@ -201,7 +201,7 @@ public class MainFrame extends JFrame {
             sb.append(String.format("  - Changes:   %d\n\n", textChanges));
             sb.append(String.format("Table Differences: %d\n\n", report.getTableDifferences().size()));
             sb.append(String.format("Image Differences: %d\n\n", report.getImageDifferences().size()));
-            sb.append("Reports saved to the selected folder.");
+            sb.append("Reports saved to the selected folder : ").append(basePath);
             return sb.toString();
         }
     }
