@@ -10,6 +10,12 @@ import com.filecomparator.service.ParserUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.filecomparator.controller.ComparisonController;
+import com.filecomparator.dto.ComparisonResult;
+import com.filecomparator.parser.GenericExcelParser;
+import com.filecomparator.swingext.MappingDialog;
+import com.filecomparator.swingext.ResultsDialog;
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
@@ -49,10 +55,14 @@ public class MainFrame extends JFrame {
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         compareButton = new JButton("Compare");
+        JButton genericCompareButton = new JButton("Generic Excel Compare");
         JButton closeButton = new JButton("Close");
         buttonPanel.add(compareButton);
+        buttonPanel.add(genericCompareButton);
         buttonPanel.add(closeButton);
         add(buttonPanel, createGbc(0, 2, 4));
+
+        genericCompareButton.addActionListener(e -> new GenericCompareSetupWorker().execute());
 
         progressBar = new JProgressBar(0, 100);
         progressBar.setStringPainted(true);
@@ -203,6 +213,82 @@ public class MainFrame extends JFrame {
             sb.append(String.format("Image Differences: %d\n\n", report.getImageDifferences().size()));
             sb.append("Reports saved to the selected folder : ").append(basePath);
             return sb.toString();
+        }
+    }
+
+    private class GenericCompareSetupWorker extends SwingWorker<String, Void> {
+        private File file1, file2;
+
+        @Override
+        protected String doInBackground() throws Exception {
+            JFileChooser fc = new JFileChooser();
+            fc.setDialogTitle("Select First Excel File");
+            if (fc.showOpenDialog(MainFrame.this) != JFileChooser.APPROVE_OPTION) return null;
+            file1 = fc.getSelectedFile();
+
+            fc.setDialogTitle("Select Second Excel File");
+            if (fc.showOpenDialog(MainFrame.this) != JFileChooser.APPROVE_OPTION) return null;
+            file2 = fc.getSelectedFile();
+
+            progressBar.setVisible(true);
+            progressBar.setIndeterminate(true);
+
+            List<String> headers1 = GenericExcelParser.getHeaders(file1.getAbsolutePath());
+            List<String> headers2 = GenericExcelParser.getHeaders(file2.getAbsolutePath());
+
+            MappingDialog dialog = new MappingDialog(MainFrame.this, headers1, headers2, file1.getAbsolutePath(), file2.getAbsolutePath());
+            dialog.setVisible(true);
+
+            return dialog.getMappingJson();
+        }
+
+        @Override
+        protected void done() {
+            progressBar.setIndeterminate(false);
+            progressBar.setVisible(false);
+            try {
+                String mappingJson = get();
+                if (mappingJson != null) {
+                    resultTextArea.setText("Mapping created. Starting comparison...");
+                    new GenericCompareWorker(mappingJson).execute();
+                } else {
+                    resultTextArea.setText("Generic comparison cancelled.");
+                }
+            } catch (Exception e) {
+                logger.error("Error in generic compare setup", e);
+                JOptionPane.showMessageDialog(MainFrame.this, "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private class GenericCompareWorker extends SwingWorker<ComparisonResult, Void> {
+        private final String mappingJson;
+
+        public GenericCompareWorker(String mappingJson) {
+            this.mappingJson = mappingJson;
+        }
+
+        @Override
+        protected ComparisonResult doInBackground() throws Exception {
+            progressBar.setVisible(true);
+            progressBar.setIndeterminate(true);
+            ComparisonController controller = new ComparisonController();
+            return controller.compare(mappingJson);
+        }
+
+        @Override
+        protected void done() {
+            progressBar.setIndeterminate(false);
+            progressBar.setVisible(false);
+            try {
+                ComparisonResult result = get();
+                resultTextArea.setText("Generic Comparison Complete. Showing results...");
+                ResultsDialog resultsDialog = new ResultsDialog(MainFrame.this, result);
+                resultsDialog.setVisible(true);
+            } catch (Exception e) {
+                logger.error("Error in generic comparison", e);
+                JOptionPane.showMessageDialog(MainFrame.this, "Error during comparison: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 }
